@@ -1,0 +1,1058 @@
+================================================================================
+ PULL-STRING DESK LAMP — PORTABLE COMPONENT EXPORT
+================================================================================
+
+WHAT THIS IS
+------------
+A self-contained export of the "banker's lamp with a pull chain" component
+from a React Three Fiber (r3f) scene (File Cabinet Portfolio). It is a brass
+desk lamp with a green glass shade that starts dark, and a hanging chain the
+visitor drags or clicks to turn it on — which fires a light-up sequence
+(chain snap → bulb glow → room ambient ramp).
+
+HOW TO USE THIS FILE
+---------------------
+1. Copy the files under "FULL SOURCE CODE" below into your new project's
+   `src/` tree, preserving the relative import paths shown in each file's
+   header comment (or update the import paths to match your structure).
+2. Install the npm packages listed under "DEPENDENCIES".
+3. Make sure your project has a working `<Canvas>` from
+   `@react-three/fiber` — see "INTEGRATION NOTES" for the minimum shell.
+4. Create (or adapt) a zustand store that exposes the slice described under
+   "STATE MANAGEMENT" — at minimum `lampOn`, `pulling`, `motionOn`,
+   `controlsEnabled`, and the `pullLamp()` action.
+5. Drop `<DeskLamp position={[x, y, z]} />` into your scene. It renders its
+   own `<PullChain />` internally — you don't mount that separately.
+6. Optionally mount `<LightRig />` once, near the top of your scene, if you
+   want the "rest of the room" to also ramp up in sync with the lamp. This
+   is the one piece that is NOT lamp-specific — see notes below on lifting
+   its logic into your own ambient lighting instead, if you'd rather keep
+   the lamp fully decoupled from room lighting.
+7. Copy the `.pull-cue` / `@keyframes pull-bob` CSS (see "CSS DEPENDENCY")
+   into your global stylesheet — it styles the little bobbing down-arrow
+   hint that appears over the chain before it's pulled.
+8. Copy the palette values you need from PALETTE (or substitute your own
+   design tokens) — see "DEPENDENCIES → PALETTE / DESIGN TOKENS".
+
+The lamp's own on/off visual state (brass sheen, shade color/glow, bulb,
+point light, spot light) is fully self-contained inside DeskLamp.jsx and
+reacts directly to `lampOn`/`pulling`/`motionOn` from the store. Nothing
+about the mesh/material logic depends on LightRig — LightRig only drives
+the *rest of the room's* ambient/fog lights, and is optional.
+
+
+================================================================================
+ 1. FULL SOURCE CODE
+================================================================================
+
+--------------------------------------------------------------------------------
+ FILE: src/scene/DeskLamp.jsx
+ (The lamp geometry, materials, and its own glow ramp on lampOn)
+--------------------------------------------------------------------------------
+
+import { useEffect, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { BackSide, Color, MathUtils } from 'three'
+import { PALETTE } from '../lib/palette'
+import { QUALITY } from '../lib/capabilities'
+import { useArchive } from '../state/archiveStore'
+import { PullChain } from './PullChain'
+
+const SEG = QUALITY.segments
+
+/* Shade geometry. An upper hemisphere (closed on top, open rim at the bottom)
+   scaled along X gives the elongated banker's-lamp dome. */
+const SHADE_RADIUS = 0.3
+const SHADE_STRETCH = 1.85
+/* Flattens the dome into the low banker's-lamp profile. */
+const SHADE_SQUASH = 0.82
+const SHADE_Y = 0.46
+const HEMISPHERE = [SHADE_RADIUS, SEG, Math.max(8, SEG / 2), 0, Math.PI * 2, 0, Math.PI / 2]
+
+const shadeOff = new Color(PALETTE.shadeGreen)
+const shadeLit = new Color(PALETTE.shadeGreenLit)
+
+/* Self-lit floor the lamp holds *while the room is dark*, so its silhouette
+   separates from the near-black wall.
+
+   The room's cold back light rakes in from behind-left, which grazes the
+   cabinet tops but misses the camera-facing side of the lamp almost entirely,
+   and brass this metallic has next to no diffuse response with no environment
+   map to reflect. Between them the one object the visitor has to find read
+   darker than the furniture behind it. This floor ramps *out* as the bulb
+   ramps in, so it costs the lit room nothing. */
+const DARK_SHEEN = { shade: 0.042, brass: 0.038 }
+
+/**
+ * Banker's lamp: brass base and stem, green glass dome, warm bulb, pull chain.
+ *
+ * Owns the *lamp's own* glow ramp (fast, ~0.3s) - the room's ambient reveal is
+ * a slower ramp handled by LightRig, so the bulb visibly leads the room.
+ */
+export function DeskLamp({ position = [0, 0, 0] }) {
+  const lampOn = useArchive((s) => s.lampOn)
+  const motionOn = useArchive((s) => s.motionOn)
+
+  const glow = useRef(0)
+  const baseRef = useRef(null)
+  const collarRef = useRef(null)
+  const stemRef = useRef(null)
+  const rimRef = useRef(null)
+  const shadeRef = useRef(null)
+  const innerRef = useRef(null)
+  const bulbRef = useRef(null)
+  const pointRef = useRef(null)
+  const spotRef = useRef(null)
+  const spotTargetRef = useRef(null)
+
+  // A SpotLight aims at its `target` object, which only has a usable world
+  // matrix once it is part of the scene graph - hence a real child node
+  // rather than the `target-position` shorthand.
+  useEffect(() => {
+    if (spotRef.current && spotTargetRef.current) {
+      spotRef.current.target = spotTargetRef.current
+    }
+  }, [])
+
+  useFrame((_, delta) => {
+    const targetGlow = lampOn ? 1 : 0
+    glow.current = motionOn
+      ? MathUtils.damp(glow.current, targetGlow, 9, delta)
+      : targetGlow
+
+    const g = glow.current
+
+    // Brass keeps its silhouette sheen until the bulb can light it properly.
+    const brassSheen = (1 - g) * DARK_SHEEN.brass
+    if (baseRef.current) baseRef.current.emissiveIntensity = brassSheen
+    if (collarRef.current) collarRef.current.emissiveIntensity = brassSheen
+    if (stemRef.current) stemRef.current.emissiveIntensity = brassSheen
+    if (rimRef.current) rimRef.current.emissiveIntensity = brassSheen
+
+    if (shadeRef.current) {
+      shadeRef.current.color.lerpColors(shadeOff, shadeLit, g)
+      // Emissive tracks the same two greens: unlit it is only lifting the
+      // silhouette off the wall, so it must not read as the lit green.
+      shadeRef.current.emissive.lerpColors(shadeOff, shadeLit, g)
+      shadeRef.current.emissiveIntensity = MathUtils.lerp(DARK_SHEEN.shade, 0.45, g)
+    }
+    if (innerRef.current) innerRef.current.emissiveIntensity = g * 1.6
+    if (bulbRef.current) bulbRef.current.emissiveIntensity = g * 4
+    if (pointRef.current) pointRef.current.intensity = g * 9
+    if (spotRef.current) spotRef.current.intensity = g * 26
+  })
+
+  return (
+    <group position={position}>
+      {/* --- Brass base --- */}
+      <mesh position={[0, 0.03, 0]} castShadow={QUALITY.shadows} receiveShadow={QUALITY.shadows}>
+        <cylinderGeometry args={[0.2, 0.23, 0.06, SEG]} />
+        <meshStandardMaterial
+          ref={baseRef}
+          color={PALETTE.brass}
+          emissive={PALETTE.brass}
+          emissiveIntensity={DARK_SHEEN.brass}
+          roughness={0.38}
+          metalness={0.55}
+        />
+      </mesh>
+      <mesh position={[0, 0.08, 0]} castShadow={QUALITY.shadows}>
+        <cylinderGeometry args={[0.13, 0.19, 0.07, SEG]} />
+        <meshStandardMaterial
+          ref={collarRef}
+          color={PALETTE.brassDark}
+          emissive={PALETTE.brass}
+          emissiveIntensity={DARK_SHEEN.brass}
+          roughness={0.42}
+          metalness={0.55}
+        />
+      </mesh>
+
+      {/* --- Stem --- */}
+      <mesh position={[0, SHADE_Y / 2 + 0.06, 0]} castShadow={QUALITY.shadows}>
+        <cylinderGeometry args={[0.036, 0.044, SHADE_Y - 0.04, SEG]} />
+        <meshStandardMaterial
+          ref={stemRef}
+          color={PALETTE.brass}
+          emissive={PALETTE.brass}
+          emissiveIntensity={DARK_SHEEN.brass}
+          roughness={0.34}
+          metalness={0.58}
+        />
+      </mesh>
+
+      {/* --- Shade: green outside, cream inside --- */}
+      <group position={[0, SHADE_Y, 0]} scale={[SHADE_STRETCH, SHADE_SQUASH, 1.05]}>
+        <mesh castShadow={QUALITY.shadows}>
+          <sphereGeometry args={HEMISPHERE} />
+          <meshStandardMaterial
+            ref={shadeRef}
+            color={PALETTE.shadeGreen}
+            emissive={PALETTE.shadeGreen}
+            emissiveIntensity={DARK_SHEEN.shade}
+            roughness={0.28}
+            metalness={0.12}
+          />
+        </mesh>
+
+        {/* Inner surface, flipped so we see its underside from below. */}
+        <mesh scale={[0.96, 0.94, 0.96]}>
+          <sphereGeometry args={HEMISPHERE} />
+          <meshStandardMaterial
+            ref={innerRef}
+            color={PALETTE.shadeInner}
+            emissive={PALETTE.lampWarm}
+            emissiveIntensity={0}
+            roughness={0.9}
+            side={BackSide}
+          />
+        </mesh>
+      </group>
+
+      {/* Brass rim around the shade opening */}
+      <mesh
+        position={[0, SHADE_Y, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        scale={[SHADE_STRETCH, 1.05, 1]}
+      >
+        <torusGeometry args={[SHADE_RADIUS * 0.99, 0.012, 8, SEG]} />
+        <meshStandardMaterial
+          ref={rimRef}
+          color={PALETTE.brass}
+          emissive={PALETTE.brass}
+          emissiveIntensity={DARK_SHEEN.brass}
+          roughness={0.34}
+          metalness={0.58}
+        />
+      </mesh>
+
+      {/* --- Bulb --- */}
+      <mesh position={[0, SHADE_Y + 0.1, 0]}>
+        <sphereGeometry args={[0.055, 12, 10]} />
+        <meshStandardMaterial
+          ref={bulbRef}
+          color={PALETTE.lampWarm}
+          emissive={PALETTE.lampWarm}
+          emissiveIntensity={0}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* --- Emitted light --- */}
+      <pointLight
+        ref={pointRef}
+        position={[0, SHADE_Y + 0.08, 0]}
+        color={PALETTE.lampWarm}
+        intensity={0}
+        distance={9}
+        decay={2}
+      />
+      <object3D ref={spotTargetRef} position={[0, -SHADE_Y - 1.2, 0]} />
+      <spotLight
+        ref={spotRef}
+        position={[0, SHADE_Y + 0.05, 0]}
+        color={PALETTE.lampWarm}
+        intensity={0}
+        angle={1.0}
+        penumbra={0.85}
+        distance={7}
+        decay={1.6}
+        castShadow={QUALITY.shadows}
+        shadow-mapSize-width={QUALITY.shadowMapSize ?? 512}
+        shadow-mapSize-height={QUALITY.shadowMapSize ?? 512}
+        shadow-bias={-0.0015}
+      />
+
+      {/* --- Pull chain, hanging off the right rim of the shade --- */}
+      <PullChain anchor={[SHADE_RADIUS * SHADE_STRETCH - 0.03, SHADE_Y - 0.01, 0.04]} />
+    </group>
+  )
+}
+
+
+--------------------------------------------------------------------------------
+ FILE: src/scene/PullChain.jsx
+ (The draggable/clickable chain: geometry, pointer interaction, hover cue)
+--------------------------------------------------------------------------------
+
+import { useRef, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
+import { MathUtils } from 'three'
+import { PALETTE } from '../lib/palette'
+import { useArchive } from '../state/archiveStore'
+import { QUALITY } from '../lib/capabilities'
+
+const CHAIN_LENGTH = 0.21
+const BEAD_RADIUS = 0.028
+
+/** How far (in world units) the chain must travel before the pull registers. */
+const PULL_THRESHOLD = 0.065
+/** Hard stop so the chain cannot be dragged into the desk. */
+const MAX_TRAVEL = 0.15
+/** Screen pixels to world units. Tuned so a ~70px drag completes the pull. */
+const DRAG_SCALE = 1 / 520
+/** Pointer travel under this is treated as a click, not a drag. */
+const TAP_SLOP = 6
+/* Matches DARK_SHEEN in DeskLamp: the chain has to stay on the lamp's
+   silhouette in the dark, since it is the part the visitor reaches for. */
+const DARK_SHEEN = 0.05
+/** Lift on hover, on top of whatever sheen the chain currently carries. */
+const HOVER_LIFT = 0.45
+
+/**
+ * The pull-chain hanging off the lamp shade. This is the only object in the
+ * scene that can turn the light on - nothing else in the room responds.
+ *
+ * Supports both a plain click and a drag-down gesture; the chain follows the
+ * pointer while dragging and springs back on release.
+ */
+export function PullChain({ anchor = [0, 0, 0] }) {
+  const groupRef = useRef(null)
+  const offset = useRef(0)
+  const target = useRef(0)
+  const glow = useRef(0)
+  const cordRef = useRef(null)
+  const beadRef = useRef(null)
+
+  const drag = useRef({ active: false, startY: 0, moved: 0 })
+  const [hovered, setHovered] = useState(false)
+
+  const lampOn = useArchive((s) => s.lampOn)
+  const pulling = useArchive((s) => s.pulling)
+  const motionOn = useArchive((s) => s.motionOn)
+  const pullLamp = useArchive((s) => s.pullLamp)
+  const setControlsEnabled = useArchive((s) => s.setControlsEnabled)
+
+  const interactive = !lampOn && !pulling
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return
+
+    // While the lamp is firing, yank the chain to full travel so the pull reads
+    // as a deliberate mechanical action rather than a state flip.
+    const resting = pulling && motionOn ? MAX_TRAVEL : target.current
+    offset.current = MathUtils.damp(offset.current, resting, 14, delta)
+
+    // A slow idle sway keeps the chain from looking frozen in the dark room.
+    const sway =
+      motionOn && !drag.current.active
+        ? Math.sin(state.clock.elapsedTime * 1.1) * 0.006
+        : 0
+
+    groupRef.current.position.y = anchor[1] - offset.current
+    groupRef.current.rotation.z = sway + offset.current * 0.12
+
+    // Sheen fades out as the room lights, mirroring the lamp's own ramp.
+    glow.current = motionOn
+      ? MathUtils.damp(glow.current, lampOn ? 1 : 0, 9, delta)
+      : lampOn
+        ? 1
+        : 0
+
+    const sheen = (1 - glow.current) * DARK_SHEEN
+    if (cordRef.current) cordRef.current.emissiveIntensity = sheen
+    if (beadRef.current) {
+      beadRef.current.emissiveIntensity =
+        sheen + (hovered && interactive ? HOVER_LIFT : 0)
+    }
+  })
+
+  function endDrag(event) {
+    if (!drag.current.active) return
+    drag.current.active = false
+    event.target?.releasePointerCapture?.(event.pointerId)
+    setControlsEnabled(true)
+
+    const pulledFarEnough = offset.current > PULL_THRESHOLD
+    const wasTap = drag.current.moved < TAP_SLOP
+
+    target.current = 0
+    if (pulledFarEnough || wasTap) pullLamp()
+  }
+
+  const handlers = interactive
+    ? {
+        onPointerOver: (e) => {
+          e.stopPropagation()
+          setHovered(true)
+          document.body.style.cursor = 'grab'
+        },
+        onPointerOut: () => {
+          setHovered(false)
+          if (!drag.current.active) document.body.style.cursor = 'auto'
+        },
+        onPointerDown: (e) => {
+          e.stopPropagation()
+          drag.current = { active: true, startY: e.clientY, moved: 0 }
+          e.target.setPointerCapture?.(e.pointerId)
+          setControlsEnabled(false)
+          document.body.style.cursor = 'grabbing'
+        },
+        onPointerMove: (e) => {
+          if (!drag.current.active) return
+          e.stopPropagation()
+          const dy = e.clientY - drag.current.startY
+          drag.current.moved = Math.max(drag.current.moved, Math.abs(dy))
+          target.current = MathUtils.clamp(dy * DRAG_SCALE, 0, MAX_TRAVEL)
+        },
+        onPointerUp: (e) => {
+          e.stopPropagation()
+          document.body.style.cursor = 'auto'
+          endDrag(e)
+        },
+        onPointerCancel: endDrag,
+      }
+    : {}
+
+  return (
+    <group ref={groupRef} position={anchor}>
+      {/* Cord */}
+      <mesh position={[0, -CHAIN_LENGTH / 2, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, CHAIN_LENGTH, 6]} />
+        <meshStandardMaterial
+          ref={cordRef}
+          color={PALETTE.chain}
+          emissive={PALETTE.chain}
+          emissiveIntensity={DARK_SHEEN}
+          roughness={0.45}
+          metalness={0.45}
+        />
+      </mesh>
+
+      {/* Bead at the end - the visual grab target */}
+      <mesh position={[0, -CHAIN_LENGTH - BEAD_RADIUS, 0]} castShadow={QUALITY.shadows}>
+        <sphereGeometry args={[BEAD_RADIUS, 12, 10]} />
+        <meshStandardMaterial
+          ref={beadRef}
+          color={PALETTE.chain}
+          roughness={0.3}
+          metalness={0.55}
+          emissive={PALETTE.chain}
+          emissiveIntensity={DARK_SHEEN}
+        />
+      </mesh>
+
+      {/* Invisible, generously sized hit area - the visible cord is far too
+          thin to grab reliably, especially on touch. */}
+      <mesh
+        position={[0, -CHAIN_LENGTH / 2 - 0.04, 0]}
+        visible={false}
+        {...handlers}
+      >
+        <cylinderGeometry args={[0.11, 0.11, CHAIN_LENGTH + 0.22, 8]} />
+      </mesh>
+
+      {/* Down-arrow cue anchored to the bead, shown only before the pull. */}
+      {interactive && (
+        <Html
+          position={[0, -CHAIN_LENGTH - 0.14, 0]}
+          center
+          pointerEvents="none"
+          zIndexRange={[20, 10]}
+        >
+          <div className="pull-cue" aria-hidden="true">
+            <svg viewBox="0 0 16 22" width="14" height="19">
+              <path
+                d="M8 1v16M2.5 12L8 18.5 13.5 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </Html>
+      )}
+    </group>
+  )
+}
+
+
+--------------------------------------------------------------------------------
+ FILE: src/scene/LightRig.jsx   [OPTIONAL — room-wide lighting, not lamp-specific]
+ (Ramps the REST of the room's ambient/fog lights up once lampOn flips true.
+  The lamp itself does NOT need this — DeskLamp's own glow ramp is
+  self-contained. Include this only if you want a "room reveal" effect
+  synced to the lamp pull. Strip the fog/hemisphere/rim lights you don't
+  want, or replace with your own ambient setup, and just keep reading
+  `lampOn`/`motionOn` from the store to drive whatever ramp you do want.)
+--------------------------------------------------------------------------------
+
+import { useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { MathUtils } from 'three'
+import { PALETTE } from '../lib/palette'
+import { QUALITY } from '../lib/capabilities'
+import { useArchive } from '../state/archiveStore'
+
+/* Ramp shaped so the room reaches ~98% brightness about 1.2s after the pull. */
+const RAMP_LAMBDA = 3.25
+/* Held dark for a beat after the chain snaps, so the bulb visibly leads. */
+const REVEAL_DELAY = 0.15
+
+/** Intensities at the two ends of the reveal: [unlit, lit]. */
+const AMBIENT = [0.1, 0.4]
+const HEMI = [0.05, 0.34]
+const SILHOUETTE = [0.5, 0.14]
+const KEY_FILL = [0, 0.75]
+const RIM = [0, 0.32]
+const FOG_DENSITY = [0.045, 0.022]
+
+/**
+ * All room lighting other than the lamp's own bulb.
+ *
+ * Before the pull the room sits at a hair above black with one cold light
+ * behind it, which is just enough to read the desk and cabinets as silhouettes.
+ */
+export function LightRig() {
+  const lampOn = useArchive((s) => s.lampOn)
+  const motionOn = useArchive((s) => s.motionOn)
+
+  const level = useRef(0)
+  const waited = useRef(0)
+
+  const ambientRef = useRef(null)
+  const hemiRef = useRef(null)
+  const silhouetteRef = useRef(null)
+  const keyFillRef = useRef(null)
+  const rimRef = useRef(null)
+  const fogRef = useRef(null)
+
+  useFrame((_, delta) => {
+    if (!motionOn) {
+      level.current = lampOn ? 1 : 0
+    } else if (lampOn) {
+      waited.current += delta
+      if (waited.current >= REVEAL_DELAY) {
+        level.current = MathUtils.damp(level.current, 1, RAMP_LAMBDA, delta)
+      }
+    } else {
+      waited.current = 0
+      level.current = MathUtils.damp(level.current, 0, RAMP_LAMBDA, delta)
+    }
+
+    const t = level.current
+    const at = (range) => MathUtils.lerp(range[0], range[1], t)
+
+    if (ambientRef.current) ambientRef.current.intensity = at(AMBIENT)
+    if (hemiRef.current) hemiRef.current.intensity = at(HEMI)
+    if (silhouetteRef.current) silhouetteRef.current.intensity = at(SILHOUETTE)
+    if (keyFillRef.current) keyFillRef.current.intensity = at(KEY_FILL)
+    if (rimRef.current) rimRef.current.intensity = at(RIM)
+    if (fogRef.current) fogRef.current.density = at(FOG_DENSITY)
+  })
+
+  return (
+    <>
+      <fogExp2 ref={fogRef} attach="fog" args={[PALETTE.wallBack, FOG_DENSITY[0]]} />
+
+      <ambientLight ref={ambientRef} color={PALETTE.ambientWarm} intensity={AMBIENT[0]} />
+      <hemisphereLight
+        ref={hemiRef}
+        color={PALETTE.ambientWarm}
+        groundColor={PALETTE.floor}
+        intensity={HEMI[0]}
+      />
+
+      {/* Cold back light: the only thing separating the furniture from the
+          wall while the room is dark. */}
+      <directionalLight
+        ref={silhouetteRef}
+        position={[-5, 7, -4]}
+        color={PALETTE.ambientCold}
+        intensity={SILHOUETTE[0]}
+      />
+
+      {QUALITY.fillLights && (
+        <>
+          {/* Warm fill from camera-left, lifting the desk front once lit. */}
+          <directionalLight
+            ref={keyFillRef}
+            position={[-3.5, 4.5, 6]}
+            color={PALETTE.lampWarm}
+            intensity={0}
+            castShadow={QUALITY.shadows}
+            shadow-mapSize-width={QUALITY.shadowMapSize ?? 512}
+            shadow-mapSize-height={QUALITY.shadowMapSize ?? 512}
+            shadow-camera-near={1}
+            shadow-camera-far={22}
+            shadow-camera-left={-8}
+            shadow-camera-right={8}
+            shadow-camera-top={8}
+            shadow-camera-bottom={-4}
+            shadow-bias={-0.0018}
+          />
+          {/* Cool rim along the cabinet tops. */}
+          <directionalLight
+            ref={rimRef}
+            position={[6, 5, -5]}
+            color={PALETTE.ambientCold}
+            intensity={0}
+          />
+        </>
+      )}
+    </>
+  )
+}
+
+
+--------------------------------------------------------------------------------
+ FILE: src/lib/palette.js  (LAMP-RELEVANT SUBSET — copy full file or these keys)
+--------------------------------------------------------------------------------
+
+export const PALETTE = {
+  // ...(rest of your palette)...
+
+  // Lamp
+  brass: '#c9a24a',
+  brassDark: '#8a6c2c',
+  shadeGreen: '#2f7d46',
+  shadeGreenLit: '#3fa05c',
+  shadeInner: '#fff4dc',
+  chain: '#bda45f',
+
+  // Light
+  lampWarm: '#ffd9a0',
+  ambientWarm: '#a8c0a0',   // only needed if using LightRig
+  ambientCold: '#4a6b7a',   // only needed if using LightRig
+  floor: '#22302a',         // only needed if using LightRig (hemisphereLight groundColor)
+  wallBack: '#1a2a21',      // only needed if using LightRig (fog color)
+}
+
+
+--------------------------------------------------------------------------------
+ FILE: src/lib/capabilities.js  (device-tier quality knobs the lamp reads)
+--------------------------------------------------------------------------------
+
+function detectWebGL() {
+  if (typeof window === 'undefined') return false
+  try {
+    const canvas = document.createElement('canvas')
+    const gl =
+      canvas.getContext('webgl2') ||
+      canvas.getContext('webgl') ||
+      canvas.getContext('experimental-webgl')
+    if (!gl) return false
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
+    return true
+  } catch {
+    return false
+  }
+}
+
+function detectTier() {
+  if (typeof window === 'undefined') return 'low'
+
+  const cores = navigator.hardwareConcurrency ?? 4
+  const memory = navigator.deviceMemory ?? 4
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
+  const narrow = window.innerWidth < 768
+
+  if (cores <= 4 || memory <= 4 || (coarse && narrow)) return 'low'
+  if (cores <= 8 || memory <= 8) return 'medium'
+  return 'high'
+}
+
+export const HAS_WEBGL = detectWebGL()
+
+export const TIER = detectTier()
+
+export const PREFERS_REDUCED_MOTION =
+  typeof window !== 'undefined' &&
+  (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+
+/** Per-tier render settings consumed by ArchiveCanvas and the scene meshes. */
+export const QUALITY = {
+  low: {
+    dpr: [1, 1.25],
+    shadows: false,
+    fillLights: false,
+    segments: 12,
+    antialias: false,
+  },
+  medium: {
+    dpr: [1, 1.5],
+    shadows: true,
+    shadowMapSize: 1024,
+    fillLights: true,
+    segments: 20,
+    antialias: true,
+  },
+  high: {
+    dpr: [1, 2],
+    shadows: true,
+    shadowMapSize: 2048,
+    fillLights: true,
+    segments: 32,
+    antialias: true,
+  },
+}[TIER]
+
+NOTE: QUALITY, HAS_WEBGL, TIER, PREFERS_REDUCED_MOTION are read at module
+load time — this is a device-capability probe, not lamp-specific, but the
+lamp/chain both depend on `QUALITY.segments`, `QUALITY.shadows`, and
+`QUALITY.shadowMapSize` for LOD, and the store depends on
+`PREFERS_REDUCED_MOTION` to seed `motionOn`. In a minimal drop-in you can
+replace this whole file with hardcoded constants, e.g.:
+
+  export const QUALITY = { segments: 24, shadows: true, shadowMapSize: 1024 }
+
+and set `motionOn: true` (or your own reduced-motion check) directly in the
+store, if you don't want the full tiering system.
+
+
+--------------------------------------------------------------------------------
+ FILE: src/state/archiveStore.js  (LAMP-RELEVANT SLICE — see section 3 below
+ for the full breakdown of what's lamp-specific vs shared/app-specific)
+--------------------------------------------------------------------------------
+
+import { create } from 'zustand'
+import { PREFERS_REDUCED_MOTION } from '../lib/capabilities'
+
+export const useArchive = create((set, get) => ({
+  /** false until the pull-chain has been pulled. Gates all landing copy. */
+  lampOn: false,
+
+  /** True while the chain is mid-animation, so it cannot be re-triggered. */
+  pulling: false,
+
+  /** Disabled while the user is dragging the chain so OrbitControls stays put. */
+  controlsEnabled: true,
+
+  motionOn: !PREFERS_REDUCED_MOTION,
+
+  pullLamp: () => {
+    if (get().lampOn || get().pulling) return
+    set({ pulling: true })
+    // Chain snaps, then the room comes up. LightRig (if used) reads lampOn to
+    // drive its own ramp; this delay is just the mechanical chain travel.
+    const chainTravel = get().motionOn ? 260 : 0
+    window.setTimeout(() => set({ lampOn: true, pulling: false }), chainTravel)
+  },
+
+  setControlsEnabled: (controlsEnabled) => set({ controlsEnabled }),
+  toggleMotion: () => set((s) => ({ motionOn: !s.motionOn })),
+}))
+
+(This is the trimmed, lamp-only slice. The real project's archiveStore.js
+also holds unrelated room state — file-cabinet drawers, dossier viewer,
+sound toggle, camera-look hint, etc. — folded into the same store. See
+section 3 for exactly what to keep vs. drop.)
+
+
+--------------------------------------------------------------------------------
+ FILE: src/scene/CameraRig.jsx  (LAMP-RELEVANT EXCERPT ONLY — full file is
+ room-specific, not part of the lamp; included so the mobile aspect-ratio
+ fix is documented, see section 5). NOT required for the lamp to work.
+--------------------------------------------------------------------------------
+
+// Portrait vs. landscape is detected from the canvas aspect ratio and used
+// to pick a wider FOV / pulled-back camera so tightly framed shots don't
+// crop on phones:
+
+const portrait = size.width / size.height < 1
+
+// ...and to pick between two full pose presets:
+const HOME = {
+  target: [0.3, 1.5, -0.4],
+  landscape: { position: [0.6, 4.3, 10.6], fov: 34 },
+  portrait: { position: [0.9, 4.6, 13.5], fov: 46 },
+}
+
+// For any *focused* (zoomed-in) pose, portrait doesn't get its own hand-authored
+// position - it derives one from the landscape pose by pulling the camera back
+// along the same sight line and dropping it, so the two framings can't drift
+// out of agreement:
+const PORTRAIT_PULL = 1.45   // multiply (position - target) by this, re-add target
+const PORTRAIT_DROP = 0.9    // then subtract this from both position.y and target.y
+const PORTRAIT_FOV = 44
+
+// resolvePose() (abbreviated):
+//   position.sub(target).multiplyScalar(PORTRAIT_PULL).add(target)
+//   position.y -= PORTRAIT_DROP
+//   target.y -= PORTRAIT_DROP
+//   return { position, target, fov: PORTRAIT_FOV }
+
+This is only relevant to the lamp insofar as your new project's camera also
+needs to keep the lamp/chain in frame and tappable on narrow/tall viewports.
+The lamp component itself has no camera dependency.
+
+
+================================================================================
+ 2. DEPENDENCIES
+================================================================================
+
+npm packages (versions pinned in this project's package.json):
+
+  "@react-three/drei": "^10.7.8"     - only for <Html> (the pull-cue arrow)
+  "@react-three/fiber": "^9.7.0"     - r3f: <Canvas>, useFrame, useThree
+  "three": "^0.186.0"                - Color, MathUtils, BackSide, geometries
+  "zustand": "^5.0.15"               - the lampOn/pulling/motionOn store
+  "react": "^19.2.8"
+  "react-dom": "^19.2.8"
+
+Install with:
+
+  npm install @react-three/fiber @react-three/drei three zustand react react-dom
+
+If you don't want the `<Html>` down-arrow cue, you can drop the
+`@react-three/drei` dependency entirely and delete that block from
+PullChain.jsx (or replace it with your own DOM overlay/tooltip approach).
+
+No other libraries are used by the lamp itself (no physics engine, no GLTF
+loader — everything is built from primitive Three.js geometries:
+cylinder, sphere-as-hemisphere, torus).
+
+
+================================================================================
+ 3. STATE MANAGEMENT
+================================================================================
+
+Store: zustand, created with `create((set, get) => ({ ... }))`, exposed as a
+single hook `useArchive`. DeskLamp and PullChain both subscribe to slices of
+it with selectors, e.g. `useArchive((s) => s.lampOn)`.
+
+LAMP-SPECIFIC state/actions (extract these — nothing else needs them):
+
+  lampOn            boolean   - true once the light is actually on. Drives
+                                 every material/light ramp in DeskLamp, and
+                                 gates whether PullChain is interactive.
+  pulling           boolean   - true for the ~260ms between the pull
+                                 registering and lampOn flipping true (the
+                                 "chain snap" window). Prevents re-triggering
+                                 and forces the chain to its full-travel pose.
+  pullLamp()        action    - the only way lampOn/pulling ever change. Guards
+                                 against double-firing, and (if motionOn) delays
+                                 lampOn by a fixed 260ms so the chain-snap
+                                 animation has time to read before the room
+                                 responds.
+
+SHARED / not lamp-specific, but the lamp DEPENDS on it existing somewhere:
+
+  motionOn          boolean   - global "animations enabled" flag, seeded from
+                                 prefers-reduced-motion. Both DeskLamp's glow
+                                 ramp and PullChain's damping/sway/pull-delay
+                                 branch on this: when false, everything snaps
+                                 instantly instead of easing, and pullLamp()
+                                 skips the 260ms delay entirely. You can hardcode
+                                 this to `true` if you don't need a reduced-motion
+                                 mode, but then also inline `true` in pullLamp's
+                                 `chainTravel` line rather than deleting the branch.
+  controlsEnabled   boolean + \
+  setControlsEnabled(bool)    - only needed if you also have OrbitControls (or
+                                 similar) on the scene: PullChain disables them
+                                 on pointerdown and re-enables them on pointerup/
+                                 cancel, so dragging the chain doesn't also orbit
+                                 the camera. If you have no orbit controls, delete
+                                 the two `setControlsEnabled` calls in PullChain.jsx
+                                 and drop this from the store.
+
+NOT needed by the lamp at all (present in the real store, but belongs to
+other parts of the room — drawers, dossier viewer, sound toggle, "has the
+user looked around yet" hint): `soundOn`, `hasLookedAround`, `indexOpen`,
+`openDossierId`, `drawerOut`, `fileStage`, and their associated actions
+(`openIndex`, `closeIndex`, `openDossier`, `pullDrawer`, `liftFolder`,
+`openFile`, `returnFile`, `closeDossier`, `markLookedAround`, `toggleSound`).
+Leave all of that behind in the source project.
+
+Minimal store for a clean drop-in (also shown as the trimmed file above):
+
+  export const useArchive = create((set, get) => ({
+    lampOn: false,
+    pulling: false,
+    controlsEnabled: true,
+    motionOn: true, // or wire up your own reduced-motion check
+    pullLamp: () => {
+      if (get().lampOn || get().pulling) return
+      set({ pulling: true })
+      const chainTravel = get().motionOn ? 260 : 0
+      window.setTimeout(() => set({ lampOn: true, pulling: false }), chainTravel)
+    },
+    setControlsEnabled: (controlsEnabled) => set({ controlsEnabled }),
+  }))
+
+If your target project doesn't use zustand at all, the whole slice above
+translates directly to React context + useReducer, or even local
+useState/useRef in a common ancestor of DeskLamp and whatever else needs to
+react to `lampOn` (e.g. a "reveal the rest of the page" callback) — the only
+subtlety worth keeping is that `pullLamp()` must guard re-entrancy
+(`if lampOn || pulling return`) and that the lampOn flip should lag the pull
+by a short delay when animating, so the chain-snap has time to read first.
+
+
+================================================================================
+ 4. INTEGRATION NOTES
+================================================================================
+
+MUST ALREADY EXIST IN THE TARGET PROJECT:
+
+  - A React Three Fiber <Canvas>. Minimal shell:
+
+      import { Canvas } from '@react-three/fiber'
+
+      function Scene() {
+        return (
+          <Canvas camera={{ position: [1, 3, 8], fov: 34 }} shadows>
+            <DeskLamp position={[0, 0, 0]} />
+            {/* your other scene content */}
+          </Canvas>
+        )
+      }
+
+    DeskLamp does not require OrbitControls, a specific camera rig, or any
+    particular room geometry — it's a self-contained <group> that can be
+    placed anywhere in the scene graph. It does call useFrame, so it must be
+    a descendant of <Canvas>.
+
+  - The zustand store slice described in section 3 (or an equivalent state
+    mechanism), importable as `useArchive` from wherever DeskLamp.jsx and
+    PullChain.jsx expect it (adjust the import path
+    `'../state/archiveStore'` to match your project layout).
+
+  - The PALETTE object (or your own equivalent color tokens) at whatever
+    path DeskLamp.jsx/PullChain.jsx import it from. Only the "Lamp" and
+    "Light" keys listed in section 1 are required; drop the rest.
+
+  - QUALITY.segments / QUALITY.shadows / QUALITY.shadowMapSize, or hardcoded
+    substitutes (see the note at the end of the capabilities.js listing).
+
+OPTIONAL:
+
+  - LightRig — only if you want the rest of the room to visually "come up"
+    in sync with the lamp turning on. The lamp's own visuals work with or
+    without it. If you skip it, wire your own reveal (fade in a page
+    section, change a CSS class, etc.) off `lampOn` directly instead.
+
+  - The `.pull-cue` CSS class and `@keyframes pull-bob` (see next section) —
+    only needed if you keep the `<Html>` down-arrow hint in PullChain.jsx.
+    Safe to delete both the JSX block and the CSS if you don't want it.
+
+FULLY SELF-CONTAINED (no external asset dependencies):
+
+  - All lamp geometry is built from primitive Three.js geometries
+    (CylinderGeometry, SphereGeometry used as a hemisphere, TorusGeometry) —
+    no GLTF/OBJ model files, no textures, no loaders required.
+  - All materials are MeshStandardMaterial with plain color/emissive props —
+    no environment map is required for the brass/glass look (see the
+    DARK_SHEEN quirk note below for why that matters).
+  - The pull/drag interaction uses only r3f's built-in pointer event props
+    (onPointerDown/Move/Up/Over/Out/Cancel) plus native
+    setPointerCapture/releasePointerCapture — no external gesture library.
+
+
+CSS DEPENDENCY (only if keeping the down-arrow cue):
+
+  /* --- The down-arrow cue anchored to the pull-chain bead (drei <Html>) --- */
+  .pull-cue {
+    color: #d8b968; /* or var(--color-brass-400) if you keep a token of that name */
+    opacity: 0.75;
+    animation: pull-bob 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(216, 185, 104, 0.45));
+  }
+
+  @keyframes pull-bob {
+    0%,
+    100% {
+      transform: translateY(-2px);
+      opacity: 0.45;
+    }
+    50% {
+      transform: translateY(4px);
+      opacity: 0.95;
+    }
+  }
+
+  Respect prefers-reduced-motion for this animation too if your project has
+  a global reduced-motion override block (the source project disables all
+  CSS animation/transition duration under `@media (prefers-reduced-motion:
+  reduce)` globally, rather than special-casing this one).
+
+
+================================================================================
+ 5. KNOWN QUIRKS / BUGS ALREADY FIXED — DON'T REINTRODUCE THESE
+================================================================================
+
+1. TORUS ORIENTATION.
+   Three.js's TorusGeometry is built flat in the XY plane by default (its
+   "hole" axis is Z). To lay the brass shade-rim ring flat like a horizontal
+   ring around the shade opening, it must be rotated -90° about X:
+
+     rotation={[-Math.PI / 2, 0, 0]}
+
+   Forgetting this rotation makes the rim render standing up on its edge,
+   facing the camera like a coin instead of wrapping the shade opening.
+
+2. DARK-STATE INVISIBILITY (metalness/emissive fix).
+   With no environment map and metalness ~0.55, the brass parts and the
+   green shade have almost no diffuse or specular response in a dark scene —
+   before this fix, the lamp was effectively invisible (same near-black as
+   the wall) until the light was already on, meaning the visitor couldn't
+   find the thing they were supposed to interact with. Fix: every lamp
+   material (base, collar, stem, rim, shade, chain cord, chain bead) carries
+   a small baseline `emissiveIntensity` (matched to its own color via
+   `emissive={color}`) even while off — see the DARK_SHEEN constants in both
+   DeskLamp.jsx (`{ shade: 0.042, brass: 0.038 }`) and PullChain.jsx
+   (`0.05`). This is a self-lit "floor" that only exists to separate the
+   lamp's silhouette from the wall in the dark; it ramps OUT to 0 as the
+   real glow ramps in (`(1 - g) * DARK_SHEEN.x`), so it costs the lit room
+   nothing and never looks like an extra light source once lit. If you
+   reimplement this lamp and it "disappears" in a dark scene, this is why —
+   don't skip the emissive baseline just because it looks unnecessary in a
+   lit preview.
+
+   Related, easy to miss: the shade's emissive color itself must lerp
+   between the *off* green and *lit* green (`shadeOff`/`shadeLit`), not just
+   its intensity — using the lit-green emissive color at low intensity while
+   off makes the unlit shade read as a dim version of the "on" color instead
+   of a neutral dark silhouette.
+
+3. DRAWER/LAMP Z-ORDER (draw order relative to other desk objects).
+   The lamp sits on the same desk surface as the closed folder and other
+   desk props. Where multiple objects occupy nearly the same depth on a
+   flat-ish blotter surface, z-fighting / incorrect occlusion can appear if
+   their Y-positions or mesh origins are too close together. In this scene
+   DeskLamp is positioned with a small explicit Z offset from the desk's
+   folder-drop point (`DESK_Z - 0.15`) specifically so its base doesn't
+   coplanar-overlap the folder/ruler props placed at `DESK_Z + ...`. If you
+   reposition the lamp relative to other flat desk objects in a new scene,
+   keep a deliberate offset (position and/or a hair of Y) rather than
+   placing meshes at visually-identical depths.
+
+4. MOBILE ASPECT-RATIO / CAMERA WIDENING.
+   On narrow/tall (portrait) viewports, a landscape-tuned FOV crops the
+   lamp and chain out of frame or makes the chain too small to tap
+   reliably. Fix (see CameraRig excerpt in section 1): detect portrait via
+   `size.width / size.height < 1`, then use a wider FOV and a camera pulled
+   back along the same sight line (`PORTRAIT_PULL` / `PORTRAIT_DROP`
+   constants) rather than a hand-tuned second camera pose per shot — this
+   keeps portrait and landscape framings from drifting out of agreement
+   over time. If your new project's camera is fixed/non-responsive, make
+   sure whatever FOV you pick still keeps the full chain (shade rim down to
+   ~`CHAIN_LENGTH + BEAD_RADIUS + cue offset`, roughly 0.4 world units below
+   the shade anchor) comfortably inside frame on a phone-width viewport, and
+   that the chain's invisible hit-cylinder (radius 0.11) is large enough to
+   be tappable at whatever DPR/zoom the camera ends up at.
+
+5. HIT-AREA VS. VISIBLE-MESH SEPARATION.
+   Not a bug that shipped, but worth preserving: the pointer handlers live
+   on a separate, invisible, oversized cylinder (`visible={false}`, radius
+   0.11) rather than on the thin visible cord mesh (radius 0.006). Attaching
+   drag/click handlers directly to the thin cord makes the chain nearly
+   impossible to grab, especially on touch. Keep this separation if you
+   resize or restyle the chain.
+
+6. TAP VS. DRAG DISAMBIGUATION.
+   A short accidental pointer movement during what the user intended as a
+   click (common on trackpads/touch) should still count as "on", not get
+   discarded as a failed drag. `TAP_SLOP` (6px) and `PULL_THRESHOLD` (0.065
+   world units) exist for this: `endDrag` fires `pullLamp()` if EITHER the
+   chain traveled far enough (a real pull) OR total pointer movement stayed
+   under the tap-slop (a real click) — not just one or the other. If you
+   simplify this interaction, keep both conditions.
+
+
+================================================================================
+ END OF FILE
+================================================================================

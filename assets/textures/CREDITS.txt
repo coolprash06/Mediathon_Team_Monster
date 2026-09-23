@@ -1,0 +1,21 @@
+Room surface textures - all CC0 (public domain) photo-scanned diffuse maps
+from Poly Haven (https://polyhaven.com). No attribution required; listed
+here so the judges can see where every non-team image came from.
+
+  wall.jpg           <- plastered_wall_04    https://polyhaven.com/a/plastered_wall_04
+  floor.jpg          <- worn_tile_floor      https://polyhaven.com/a/worn_tile_floor
+  ceiling.jpg        <- large_floor_tiles_02 https://polyhaven.com/a/large_floor_tiles_02
+  painted-metal.jpg  <- green_metal_rust     https://polyhaven.com/a/green_metal_rust
+  wood.jpg           <- wood_table_001       https://polyhaven.com/a/wood_table_001  (rotated 90deg)
+  counter.jpg        <- painted_concrete_02  https://polyhaven.com/a/painted_concrete_02
+  plastic.jpg        <- ceiling_interior     https://polyhaven.com/a/ceiling_interior
+  carpet.jpg         <- dirty_carpet         https://polyhaven.com/a/dirty_carpet
+  steel.jpg          <- blue_metal_plate     https://polyhaven.com/a/blue_metal_plate
+
+Files were resized / recompressed. Colour is re-tinted in CSS with
+background-blend-mode, so one scan can serve several materials
+(e.g. painted-metal.jpg is both the olive cabinets and the beige pedestals).
+
+These are surface materials only. Every PHOTOGRAPH shown in the portfolio
+itself (monitor slideshows, drawer files) must be the team's own shots from
+the competition window, with EXIF intact - see guidelines.txt.

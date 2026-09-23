@@ -1,0 +1,166 @@
+================================================================================
+ MEDIATHON 3.0 — OFFICIAL GUIDELINES (compiled for Team Monster)
+================================================================================
+Team: Monster | Theme: Rush Hour | Members: 4
+
+--------------------------------------------------------------------------------
+ WHAT THIS COMPETITION IS
+--------------------------------------------------------------------------------
+- A competition combining PHOTOGRAPHY + WEB DEVELOPMENT.
+- Deliverable: a portfolio website for BPDC, built using HTML, CSS, and
+  JavaScript, populated with photographs you take yourselves on your
+  assigned theme.
+- Flow: Workshop -> Learn -> Photograph -> Build -> Submit
+
+--------------------------------------------------------------------------------
+ ELIGIBILITY & TEAM RULES
+--------------------------------------------------------------------------------
+- Open to all years & disciplines.
+- Team size: 1-4 members.
+- Free for MTC/Reflexions members. AED 5 for non-members.
+- Mixed teams of members and non-members are allowed.
+
+--------------------------------------------------------------------------------
+ TECH RULES — DO NOT VIOLATE
+--------------------------------------------------------------------------------
+- AI tools (ChatGPT, Gemini, Copilot, Claude, ClaudeCode, etc.) ARE allowed.
+- Web-development tools/frameworks like REACT, BOOTSTRAP, etc. are NOT
+  allowed. Build in plain/vanilla HTML, CSS, and JavaScript.
+- CONFIRMED WITH ORGANIZERS: Three.js (and by extension any external JS
+  library) is NOT allowed. Must be built in plain/vanilla JavaScript only —
+  no rendering libraries, no external dependencies of any kind for the
+  interactive scene.
+
+--------------------------------------------------------------------------------
+ PHOTO RULES
+--------------------------------------------------------------------------------
+- Photos must be taken within the competition window. NOTE: the two official
+  mails gave two different date ranges — flag this discrepancy with
+  organizers and confirm which is correct before shooting:
+    * Guidelines doc said: September 22 to 24
+    * Submission checklist said: September 21 to 25
+- Website and photography must be based on your assigned theme (Rush Hour).
+- All photos used on the website must be uploaded to a Google Drive folder
+  with ORIGINAL METADATA INTACT. Organizers will check EXIF metadata to
+  verify shoot dates — do not strip or edit it.
+  - Do NOT send photos via WhatsApp or take screenshots — both strip
+    metadata. Transfer originals straight from phone/camera to Drive.
+- The Google Drive folder must be set to "Anyone with the link."
+
+--------------------------------------------------------------------------------
+ WORKSHOPS
+--------------------------------------------------------------------------------
+- Date: Monday, 21 September 2026. Venue: Lab 336.
+- Reflexions workshop (photography basics/editing in Lightroom) — 5th hour.
+- MTC workshop (Designing the Dynamic Web: motion, interaction, visual
+  experience) — 6th hour.
+- Extra points awarded for workshop attendance (covered — one team member
+  attended).
+
+--------------------------------------------------------------------------------
+ SUBMISSION CHECKLIST
+--------------------------------------------------------------------------------
+[ ] Website hosted on GitHub Pages.
+[ ] GitHub repository is PUBLIC.
+[ ] Live website link added to the GitHub repo's README.
+[ ] All photos used on the website uploaded to a Google Drive folder.
+[ ] Google Drive folder set to "Anyone with the link."
+[ ] Photo metadata preserved (not stripped/edited) — will be checked.
+[ ] Website and photography clearly relate to assigned theme (Rush Hour).
+[ ] Submit via the official Google Form (link sent separately).
+
+--------------------------------------------------------------------------------
+ DEADLINE
+--------------------------------------------------------------------------------
+- 11:59 PM, September 25, 2026 (GST).
+- LATE SUBMISSIONS WILL NOT BE ACCEPTED.
+
+--------------------------------------------------------------------------------
+ JUDGING CRITERIA
+--------------------------------------------------------------------------------
+BEST DASHBOARD / WEBSITE (50 points)
+  Storytelling and concept        15
+  Animations                      12
+  Creativity and originality       8
+  Technical execution              5
+  Theme integration                5
+  Workshop attendance              5
+  -------------------------------------
+  Total                           50
+
+BEST PICTURE (50 points)
+  Storytelling and context        15
+  Technical excellence            10
+  Composition and framing         10
+  Impact and originality          10
+  Workshop attendance              5
+  -------------------------------------
+  Total                           50
+
+--------------------------------------------------------------------------------
+ PRIZES
+--------------------------------------------------------------------------------
+  Overall Best Entry             200 AED
+  Best Website                   100 AED
+  Best Pictures                  100 AED
+  Fresher's Entry                100 AED
+
+--------------------------------------------------------------------------------
+ TEAM MONSTER — SITE CONCEPT NOTES (not official rules, for our own build)
+--------------------------------------------------------------------------------
+BUILD CONSTRAINT: 100% plain/vanilla HTML, CSS, JS. No Three.js, no other
+external JS libraries (confirmed with organizers). "3D" room effect to be
+achieved with CSS 3D transforms (perspective, translateZ, rotateX/Y) and
+transitions — not WebGL/canvas rendering.
+
+ROOM (retro security-room aesthetic — CRT monitors, olive-green filing
+cabinets, wooden desk, brass desk lamp; see reference photos, not copied
+directly):
+- Dark "security/dilapidated room" scene. Room starts in shadow/outline only.
+- Pull-chain lamp interaction turns on the room lighting (reveal/fade via
+  CSS class toggle + transition, triggered by JS click on the chain).
+- Once lit: 3 desktops + 2 file cabinets (4 drawers each = 8 drawers total)
+  are visible and clickable.
+
+DESKTOPS (time-of-day, one photo set each):
+- Desktop 1 = Morning, Desktop 2 = Afternoon, Desktop 3 = Evening.
+- Click a desktop -> camera/view zooms to a front-on view of that screen.
+- Below the screen: a button reading "Click to See Pictures from the
+  [Morning/Afternoon/Evening]" (per-desktop label).
+- Clicking the button starts a one-at-a-time slideshow of that time
+  window's photos, regardless of location.
+- Slideshow nav: "<-" icon/button bottom-left of screen (previous image),
+  "->" icon/button bottom-right of screen (next image).
+
+FILE CABINETS (location-based, drawer -> file -> photos):
+- 2 cabinets, 4 drawers each. 6 drawers used for categories, 2 bottom
+  drawers (one per cabinet) left empty.
+- Drawer labels: Canteen, Outdoor, Library, Classrooms, Corridors,
+  Sports Complex.
+- Click a cabinet -> camera/view zooms toward it.
+- Click a drawer -> drawer slides open (CSS transform/transition),
+  revealing a file inside labeled with its category name.
+- "Take the file" button appears, plus "Put it back" to close the drawer.
+- Clicking the file graphic directly (not just the button) ALSO triggers
+  the same action — give the file itself a generously-sized clickable
+  area, not just the button.
+- Taking the file animates it (CSS transform translate) from the drawer
+  position to a fixed spot on the desk near the lamp. Lands closed, shows
+  "Open the file" button + "Put it back" (returns file to drawer).
+- "Open the file" transitions into a spread/slideshow view of that
+  category's venue photos, with page-counter style navigation
+  (prev/next), matching the desktop slideshow pattern for consistency.
+- Some photos may reasonably appear under both a time-of-day desktop AND
+  a location drawer (e.g. a lunchtime canteen shot) — shot list should
+  tag each photo with both its time and its location.
+
+NAVIGATION:
+- An explicit "Back to Room" control is present in every zoomed-in view
+  (desktop slideshow, cabinet, open drawer, open file) — lets the visitor
+  return directly to the full room view at any point, not just via
+  "Put it back"/closing individual elements.
+
+STILL OPEN / TO DECIDE:
+- Final overall visual style direction (photoreal vs. more illustrated/
+  flat) for the room itself.
+================================================================================

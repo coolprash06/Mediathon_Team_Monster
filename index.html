@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rush Hour · Team Monster</title>
+  <meta name="description" content="Rush Hour - a photography archive by Team Monster for Mediathon 3.0. Find the lamp in the dark security room and pull its chain.">
+  <meta name="theme-color" content="#030406">
+  <link rel="stylesheet" href="css/room.css">
+</head>
+<body>
+  <main class="app is-dark" id="app">
+    <h1 class="visually-hidden">Rush Hour - a surveillance-room photo archive by Team Monster</h1>
+
+    <div class="viewport" id="viewport">
+      <!-- The stage is a fixed 1600x900 "film frame". JS scales it to the window. -->
+      <div class="stage" id="stage">
+        <div class="camera" id="camera">
+          <!-- Every wall, desk, monitor and cabinet is built into #room by js/scene.js -->
+          <div class="room" id="room"></div>
+        </div>
+
+        <!-- Screen-space light, drawn over the whole frame -->
+        <div class="fx" id="fx" aria-hidden="true">
+          <div class="fx-night"></div>
+          <div class="fx-bloom"></div>
+          <div class="fx-grade"></div>
+          <div class="fx-vignette"></div>
+          <div class="fx-flicker"></div>
+        </div>
+      </div>
+      <div class="grain" aria-hidden="true"></div>
+    </div>
+
+    <div class="hud">
+      <header class="slate" aria-live="polite">
+        <p class="slate-rec"><span class="rec-dot" aria-hidden="true"></span>REC</p>
+        <p class="slate-title">Rush Hour</p>
+        <p class="slate-sub">Team Monster &middot; Mediathon 3.0</p>
+      </header>
+
+      <p class="hint" id="hint">It's dark in here. Find the lamp and pull its chain.</p>
+    </div>
+
+    <noscript>
+      <p class="noscript">This room is built live in the browser - please enable JavaScript to switch the light on.</p>
+    </noscript>
+  </main>
+
+  <script src="js/scene.js"></script>
+  <script src="js/lamp.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
