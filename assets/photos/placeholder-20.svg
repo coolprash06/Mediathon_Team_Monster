@@ -1,0 +1,16 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1000' height='1500' viewBox='0 0 1000 1500'>
+  <defs><linearGradient id='sky' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#86b4d8'/><stop offset='1' stop-color='#eeeadb'/></linearGradient></defs>
+  <rect width='1000' height='1500' fill='url(#sky)'/>
+  <polygon points='0,0 420.0,525.0 420.0,855.0 0,1500' fill='#1e2a33' opacity='.75'/>
+  <polygon points='1000,0 580.0,525.0 580.0,855.0 1000,1500' fill='#1e2a33' opacity='.75'/>
+  <rect x='420.0' y='645.0' width='18.0' height='165.0' rx='4' fill='#1e2a33'/>
+  <rect x='470.0' y='645.0' width='18.0' height='165.0' rx='4' fill='#1e2a33'/>
+  <rect x='520.0' y='645.0' width='18.0' height='165.0' rx='4' fill='#1e2a33'/>
+  <rect x='570.0' y='645.0' width='18.0' height='165.0' rx='4' fill='#1e2a33'/>
+  <rect x='60.0' y='90.0' width='880.0' height='1320.0' fill='none' stroke='#fff' stroke-opacity='.45' stroke-width='3' stroke-dasharray='18 12'/>
+  <g font-family='Courier New, monospace' fill='#fff' text-anchor='middle'>
+    <text x='500.0' y='300.0' font-size='27.0' letter-spacing='6' opacity='.85'>PLACEHOLDER 20</text>
+    <text x='500.0' y='366.0' font-size='60.0' font-weight='700' letter-spacing='4'>CORRIDORS</text>
+    <text x='500.0' y='408.0' font-size='30.0' letter-spacing='5'>AFTERNOON</text>
+  </g>
+</svg>

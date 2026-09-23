@@ -306,8 +306,11 @@
         mat: 'm-olive', skip: ['back', 'bottom'], cls: 'drawer'
       });
       drawer.dataset.category = label ? label.toLowerCase().replace(/\s+/g, '-') : 'empty';
+      drawer.dataset.label = label;
       var front = drawer.faces.front;
       front.classList.add('drawer-front');
+      // Dark interior + hanging-file rims, only shown while the drawer is pulled
+      el('div', 'drawer-inside', drawer.faces.top);
       var holder = el('div', 'label-holder', front);
       el('span', 'label-card', holder, label || '');
       el('span', 'drawer-pull', front);
@@ -394,6 +397,43 @@
     return { root: g, art: art, shade: shade, chain: chain, cord: cord, pull: pull, cue: cue, hit: hit };
   }
 
+  /* ------------------------------------------------- the travelling file */
+
+  /**
+   * The manila folder that is carried from a drawer to the desk. It is a
+   * two-sided flat card; js/explore.js animates its transform in world units,
+   * upright (facing the camera) in a drawer and rotateX(90) lying on the desk.
+   */
+  function buildTravelFile(room) {
+    var g = el('div', 'obj travel-file', room);
+    g.id = 'travel-file';
+    var front = el('div', 'f f--front tf-face', g);
+    size(front, 150, 112);
+    var tab = el('span', 'tf-tab', front);
+    el('span', 'tf-label', tab);
+    el('span', 'tf-stamp', front, 'RUSH HOUR');
+    var back = el('div', 'f f--front tf-face tf-face--back', g);
+    size(back, 150, 112);
+    back.style.transform = 'rotateY(180deg)';
+    return g;
+  }
+
+  /** World positions the file animation needs (see buildCabinet / buildDesk). */
+  function fileGeometry() {
+    var w = 215, h = 532, d = 280, z = BACK + d / 2 + 5, dh = 124, gap = 4, top = FLOOR - h + 8;
+    var deskCx = -85, deskCz = -330, deskD = 330;
+    return {
+      cabinetX: CABINETS.map(function (c) { return c.x; }),
+      /** y of drawer k's top edge */
+      drawerTop: function (k) { return top + dh * k + gap * k; },
+      /** z through the middle of a closed drawer's body */
+      drawerZ: z + d / 2 + 2 - (d - 18) / 2,
+      drawerDepth: d - 18,
+      // #file-drop is 250px / 40px into the desk top's face (see .drop-zone)
+      drop: { x: deskCx - 690 / 2 + 250, y: DESK_TOP - 1, z: deskCz - deskD / 2 + 40 }
+    };
+  }
+
   /* ------------------------------------------------------- wall details */
 
   function buildWallDetails(room, shell) {
@@ -477,8 +517,11 @@
     var rug = plane(room, 1000, 300, { x: -430, y: FLOOR - 1, z: -560, rx: 90 }, 'f f--floor m-carpet rug');
     rug.style.setProperty('--bx', '-120px');
 
-    return { monitors: monitors, cabinets: cabinets, desk: desk, lamp: lamp };
+    var file = buildTravelFile(room);
+
+    RH.scene = { monitors: monitors, cabinets: cabinets, desk: desk, lamp: lamp, file: file };
+    return RH.scene;
   };
 
-  RH.world = { FLOOR: FLOOR, CEIL: CEIL, BACK: BACK, FRONT: FRONT, HALF_W: HALF_W };
+  RH.world = { FLOOR: FLOOR, CEIL: CEIL, BACK: BACK, FRONT: FRONT, HALF_W: HALF_W, file: fileGeometry() };
 })();

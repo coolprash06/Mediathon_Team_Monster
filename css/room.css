@@ -1625,6 +1625,178 @@ body {
   color: var(--ui);
 }
 
+/* ============================================================ interaction
+   Once the light is on, the monitors and cabinets can be clicked (see
+   js/explore.js). .is-hot is set on hover and on keyboard focus. */
+
+.is-lit:not(.is-zoomed) .monitor,
+.is-lit:not(.is-zoomed) .cabinet {
+  cursor: pointer;
+}
+
+.monitor:focus,
+.cabinet:focus {
+  outline: none;
+}
+
+.crt-screen {
+  transition: box-shadow 0.3s ease, filter 0.3s ease;
+}
+
+.monitor.is-hot .crt-screen {
+  filter: brightness(1.2);
+  box-shadow:
+    0 0 0 4px #a99f86,
+    0 0 0 5px #6d6553,
+    0 0 0 9px #cfc4a8,
+    0 0 0 11px rgba(255, 217, 160, 0.9),
+    0 0 30px 12px rgba(150, 190, 255, 0.35),
+    inset 0 0 22px 6px rgba(0, 0, 0, 0.9);
+}
+
+.drawer-front {
+  transition: filter 0.3s ease;
+}
+
+.cabinet.is-hot .drawer-front {
+  filter: brightness(1.16);
+}
+
+.cabinet.is-hot .label-card {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 8px rgba(255, 217, 160, 0.8);
+}
+
+/* js/explore.js: while the cabinet close-up covers this cabinet exactly, hide
+   the real one instead of trusting its pulled drawer to stay behind the
+   close-up's static footprint under perspective (visibility, not display,
+   so its geometry stays readable to roomBox()/getBoundingClientRect). */
+.cabinet.is-behind-closeup {
+  visibility: hidden;
+}
+
+/* js/explore.js zooms by giving .camera a translate + scale about its corner. */
+.camera {
+  transform-origin: 0 0;
+}
+
+/* While zoomed, the frame may pull past the stage edge: let the room show. */
+.is-zoomed .camera {
+  overflow: visible;
+}
+
+.is-zoomed .fx-bloom {
+  opacity: 0;
+  transition-duration: 0.6s;
+}
+
+/* A drawer pulled out while its file is carried to the desk. `translate`
+   composes with the inline transform scene.js gives every box. */
+.drawer {
+  transition: translate 0.8s var(--reveal-ease);
+}
+
+.drawer.is-pulled {
+  translate: 0 0 170px;
+}
+
+.drawer-inside {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(rgba(0, 0, 0, 0) 0 22px, rgba(214, 186, 120, 0.55) 22px 25px, rgba(0, 0, 0, 0) 25px 34px),
+    linear-gradient(#0a0b08, #22231a);
+  box-shadow: inset 0 0 0 5px #545338, inset 0 0 18px 6px rgba(0, 0, 0, 0.8);
+  transition: opacity 0.3s ease;
+}
+
+.drawer.is-pulled .drawer-inside {
+  opacity: 1;
+}
+
+/* The folder that travels from a drawer to the desk (#file-drop) */
+.travel-file {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+}
+
+.travel-file.is-visible {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.tf-face {
+  backface-visibility: hidden;
+  border-radius: 2px 2px 4px 4px;
+  background: linear-gradient(170deg, #e9cd8e, #cfa95f 70%, #c09a52);
+  box-shadow: inset 0 0 0 1px rgba(98, 66, 22, 0.4), inset 0 -8px 12px rgba(120, 80, 20, 0.2);
+}
+
+.tf-face--back {
+  background: linear-gradient(170deg, #d9bb78, #bf9a52);
+}
+
+.tf-tab {
+  position: absolute;
+  left: 64px;
+  top: -13px;
+  width: 70px;
+  height: 14px;
+  border-radius: 4px 4px 0 0;
+  background: #e9cd8e;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.tf-label {
+  display: block;
+  margin: 3px 5px 0;
+  overflow: hidden;
+  font: 700 7px/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #3a2c12;
+}
+
+.tf-stamp {
+  position: absolute;
+  right: 14px;
+  bottom: 16px;
+  padding: 2px 4px;
+  border: 1.5px solid rgba(170, 38, 30, 0.75);
+  font: 700 8px/1 var(--mono);
+  letter-spacing: 0.12em;
+  color: rgba(170, 38, 30, 0.8);
+  transform: rotate(-8deg);
+}
+
+/* Room label naming whatever the pointer / focus is on */
+.target-label {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(max(28px, env(safe-area-inset-bottom)) + 34px);
+  margin: 0;
+  text-align: center;
+  font-size: clamp(12px, 1.4vw, 14px);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 217, 160, 0.9);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.show-target:not(.is-zoomed) .target-label {
+  opacity: 1;
+}
+
+.is-zoomed .hint {
+  opacity: 0;
+}
+
 /* ======================================================= reduced motion */
 
 @media (prefers-reduced-motion: reduce) {

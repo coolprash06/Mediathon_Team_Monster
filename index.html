@@ -7,6 +7,7 @@
   <meta name="description" content="Rush Hour - a photography archive by Team Monster for Mediathon 3.0. Find the lamp in the dark security room and pull its chain.">
   <meta name="theme-color" content="#030406">
   <link rel="stylesheet" href="css/room.css">
+  <link rel="stylesheet" href="css/views.css">
 </head>
 <body>
   <main class="app is-dark" id="app">
@@ -32,6 +33,126 @@
       <div class="grain" aria-hidden="true"></div>
     </div>
 
+    <!-- Close-ups. The camera zooms into the room, then cuts to one of these.
+         Wiring lives in js/explore.js. -->
+    <div class="views" id="views">
+      <button type="button" class="back-btn" id="back-btn"><span aria-hidden="true">&lt;-</span> Back to Room</button>
+
+      <!-- A desktop, front-on -->
+      <section class="view view--monitor" id="view-monitor" aria-labelledby="monitor-title">
+        <h2 class="visually-hidden" id="monitor-title">Desktop</h2>
+        <div class="closeup-slot">
+          <div class="ccrt-wrap" id="ccrt-wrap">
+            <div class="ccrt m-plastic" id="ccrt">
+              <div class="crt-screen">
+                <div class="crt-power">
+                  <div class="crt-feed" id="ccrt-feed"></div>
+                  <div class="crt-osd">
+                    <span class="osd-cam" id="ccrt-cam">CAM 01</span>
+                    <span class="osd-rec" aria-hidden="true">REC</span>
+                    <span class="osd-slot" id="ccrt-slot">MORNING</span>
+                    <span class="osd-time"></span>
+                  </div>
+                </div>
+                <div class="ccrt-show">
+                  <img class="ccrt-photo" id="ccrt-photo" alt="">
+                  <div class="ccrt-static" aria-hidden="true"></div>
+                  <div class="ccrt-osd">
+                    <span class="ccrt-tag" id="ccrt-tag">CAM 01 &#9654; PLAY</span>
+                    <span class="ccrt-where" id="ccrt-where"></span>
+                    <span class="ccrt-count" id="ccrt-count" aria-live="polite"></span>
+                  </div>
+                </div>
+                <div class="crt-scan"></div>
+                <div class="crt-glass"></div>
+                <button type="button" class="crt-nav crt-nav--prev" id="ccrt-prev" aria-label="Previous picture">&lt;-</button>
+                <button type="button" class="crt-nav crt-nav--next" id="ccrt-next" aria-label="Next picture">-&gt;</button>
+              </div>
+              <span class="crt-badge">TMV-14</span>
+              <span class="crt-led"></span>
+              <span class="crt-knobs"><i></i><i></i><i></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="view-actions">
+          <button type="button" class="act act--primary" id="ccrt-play">Click to See Pictures from the Morning</button>
+        </div>
+      </section>
+
+      <!-- A filing cabinet, front-on. Its drawers are built by js/explore.js. -->
+      <section class="view view--cabinet" id="view-cabinet" aria-labelledby="cabinet-title">
+        <h2 class="visually-hidden" id="cabinet-title">Filing cabinet</h2>
+        <div class="closeup-slot">
+          <div class="ccab-wrap" id="ccab-wrap">
+            <div class="ccab" id="ccab"></div>
+          </div>
+        </div>
+        <div class="view-actions">
+          <p class="view-prompt" id="cab-prompt">Pick a drawer</p>
+          <button type="button" class="act act--primary" id="cab-take" hidden>Take the file</button>
+          <button type="button" class="act" id="cab-return" hidden>Put it back</button>
+        </div>
+      </section>
+
+      <!-- The file on the desk, and opened out into a spread -->
+      <section class="view view--desk" id="view-desk" aria-labelledby="desk-title">
+        <h2 class="visually-hidden" id="desk-title">File</h2>
+        <div class="desk-scene" id="desk-scene">
+          <div class="desk-cam" id="desk-cam">
+            <div class="desk-wood m-wood" aria-hidden="true">
+              <span class="desk-sheet desk-sheet--a"></span>
+              <span class="desk-sheet desk-sheet--b"></span>
+              <span class="desk-pencil"></span>
+            </div>
+            <div class="folder" id="folder">
+              <div class="folder-back" aria-hidden="true"></div>
+
+              <!-- Right-hand page: the prints -->
+              <div class="folder-sheet">
+                <span class="sheet-clip" aria-hidden="true"></span>
+                <div class="print-area">
+                  <figure class="print" id="print">
+                    <img id="print-img" alt="">
+                  </figure>
+                </div>
+                <p class="sheet-cap" id="sheet-cap"></p>
+                <div class="sheet-nav">
+                  <button type="button" class="page-nav" id="page-prev" aria-label="Previous picture">&lt;-</button>
+                  <span class="page-count" id="page-count" aria-live="polite"></span>
+                  <button type="button" class="page-nav" id="page-next" aria-label="Next picture">-&gt;</button>
+                </div>
+              </div>
+
+              <!-- Front cover; its inside becomes the left-hand page -->
+              <div class="folder-cover">
+                <button type="button" class="cover-front" id="cover-front">
+                  <span class="cover-tab"><span id="cover-tab"></span></span>
+                  <span class="cover-label">
+                    <span class="cover-label-k">Location file</span>
+                    <span class="cover-label-v" id="cover-label"></span>
+                  </span>
+                  <span class="cover-stamp" aria-hidden="true">Rush Hour</span>
+                </button>
+                <div class="cover-inner">
+                  <p class="rec-head">Rush Hour &middot; Field file</p>
+                  <p class="rec-no" id="rec-no"></p>
+                  <h3 class="rec-title" id="rec-title"></h3>
+                  <p class="rec-meta" id="rec-meta"></p>
+                  <ol class="rec-list" id="rec-list"></ol>
+                  <span class="rec-stamp" aria-hidden="true">Rush Hour</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="view-actions">
+          <button type="button" class="act act--primary" id="file-open">Open the file</button>
+          <button type="button" class="act" id="file-return">Put it back</button>
+          <button type="button" class="act" id="file-close" hidden>Close the file</button>
+        </div>
+      </section>
+    </div>
+
     <div class="hud">
       <header class="slate" aria-live="polite">
         <p class="slate-rec"><span class="rec-dot" aria-hidden="true"></span>REC</p>
@@ -40,6 +161,7 @@
       </header>
 
       <p class="hint" id="hint">It's dark in here. Find the lamp and pull its chain.</p>
+      <p class="target-label" id="target-label" aria-hidden="true"></p>
     </div>
 
     <noscript>
@@ -50,5 +172,7 @@
   <script src="js/scene.js"></script>
   <script src="js/lamp.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/photos.js"></script>
+  <script src="js/explore.js"></script>
 </body>
 </html>

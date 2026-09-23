@@ -94,7 +94,8 @@
   var pan = null;
 
   document.getElementById('viewport').addEventListener('pointerdown', function (e) {
-    if (!fit.pannable || !app.classList.contains('is-lit') || e.target.closest('.chain-hit')) return;
+    if (!fit.pannable || !app.classList.contains('is-lit') || app.classList.contains('is-zoomed') ||
+      e.target.closest('.chain-hit')) return;
     pan = { id: e.pointerId, x: e.clientX, focus: fit.focusX };
     app.classList.add('is-panning');
   });
@@ -126,10 +127,13 @@
   }, { passive: true });
 
   function tick() {
-    if (motionOn()) {
+    // While zoomed into a close-up the eye holds still, so the framing that
+    // js/explore.js measured stays lined up with the close-up it cuts to.
+    var held = app.classList.contains('is-zoomed');
+    if (motionOn() && !held) {
       look.x += (look.tx - look.x) * 0.06;
       look.y += (look.ty - look.y) * 0.06;
-    } else {
+    } else if (!held) {
       look.x = look.y = 0;
     }
     camera.style.perspectiveOrigin =

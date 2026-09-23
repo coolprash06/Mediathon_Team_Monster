@@ -1,0 +1,24 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1500' height='1000' viewBox='0 0 1500 1000'>
+  <defs><linearGradient id='sky' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#bcd3e0'/><stop offset='1' stop-color='#f2d9a6'/></linearGradient></defs>
+  <rect width='1500' height='1000' fill='url(#sky)'/>
+  <rect x='84.0' y='550.0' width='12' height='112.0' fill='#2a3440'/>
+  <circle cx='90.0' cy='522.0' r='70.0' fill='#2a3440'/>
+  <rect x='309.0' y='530.0' width='12' height='144.00000000000003' fill='#2a3440'/>
+  <circle cx='315.0' cy='494.0' r='90.00000000000001' fill='#2a3440'/>
+  <rect x='534.0' y='510.0' width='12' height='176.00000000000003' fill='#2a3440'/>
+  <circle cx='540.0' cy='466.0' r='110.00000000000001' fill='#2a3440'/>
+  <rect x='759.0' y='550.0' width='12' height='112.0' fill='#2a3440'/>
+  <circle cx='765.0' cy='522.0' r='70.0' fill='#2a3440'/>
+  <rect x='984.0' y='530.0' width='12' height='144.00000000000003' fill='#2a3440'/>
+  <circle cx='990.0' cy='494.0' r='90.00000000000001' fill='#2a3440'/>
+  <rect x='1209.0' y='510.0' width='12' height='176.00000000000003' fill='#2a3440'/>
+  <circle cx='1215.0' cy='466.0' r='110.00000000000001' fill='#2a3440'/>
+  <rect x='1434.0' y='550.0' width='12' height='112.0' fill='#2a3440'/>
+  <circle cx='1440.0' cy='522.0' r='70.0' fill='#2a3440'/>
+  <rect x='90.0' y='60.0' width='1320.0' height='880.0' fill='none' stroke='#fff' stroke-opacity='.45' stroke-width='3' stroke-dasharray='18 12'/>
+  <g font-family='Courier New, monospace' fill='#fff' text-anchor='middle'>
+    <text x='750.0' y='200.0' font-size='40.5' letter-spacing='6' opacity='.85'>PLACEHOLDER 07</text>
+    <text x='750.0' y='299.0' font-size='90.0' font-weight='700' letter-spacing='4'>OUTDOOR</text>
+    <text x='750.0' y='362.0' font-size='45.0' letter-spacing='5'>MORNING</text>
+  </g>
+</svg>
