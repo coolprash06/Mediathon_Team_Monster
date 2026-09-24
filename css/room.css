@@ -641,6 +641,14 @@ body {
   transform-origin: 50% 50%;
 }
 
+/* Each room screen on a layer of its own. Painted into the monitor's face,
+   the screens of the two desktops you are NOT looking at came back one tile
+   short for a frame or two as Back to Room swung them into view (measured;
+   see "How the camera moves" in js/explore.js). */
+.room .crt-power {
+  will-change: transform;
+}
+
 .crt-feed {
   position: absolute;
   inset: -20px;
@@ -776,6 +784,15 @@ body {
 .is-lit .crt-spill {
   opacity: 1;
   transition: opacity 0.6s ease calc(1.5s + var(--i) * 0.28s);
+}
+
+/* Once a screen is on, js/main.js swaps the finished power-on animation for
+   this plain resting state. Left filling, the animation keeps the screen's
+   layer flagged as transform-animating, and Chrome re-rasterises such a
+   layer at every camera zoom - it was the last tile to come up blank. */
+.is-lit .crt-power.is-on {
+  animation: none;
+  opacity: 1;
 }
 
 @keyframes crt-on {
@@ -1679,9 +1696,67 @@ body {
   transform-origin: 0 0;
 }
 
-/* While zoomed, the frame may pull past the stage edge: let the room show. */
-.is-zoomed .camera {
+/* While zoomed, the frame may pull past the stage edge: let the room show.
+   .is-moving keeps the clip off until the camera has fully settled: changing
+   it while the transform is still running rebuilds the layer tree mid-move,
+   which is one of the ways a half-painted (black) frame gets on screen. */
+.is-zoomed .camera,
+.is-moving .camera {
   overflow: visible;
+}
+
+/* ------------------------------------------------------- a moving camera
+   Zooming scales the whole 3D render - ~390 composited surfaces. It stays
+   smooth only because nothing has to be painted while it moves: js/explore.js
+   ("How the camera moves") keeps the room's existing raster pinned for the
+   whole trip. Anything that repaints INSIDE the room mid-move (the CRT
+   static, the film grain, the strip light sweeping the ceiling, blinking
+   LEDs, traffic) breaks that, and a frame can be presented with a tile that
+   is not painted yet - a black rectangle.
+
+   So the room's ambient loops hold still for the length of a move. They are
+   paused, not stopped: they pick up where they left off when the camera
+   lands, and nobody can read 10fps noise on a CRT that is flying past anyway.
+   js/explore.js sets .is-moving around every camera move and file flight;
+   js/main.js sets .is-panning while the room is being dragged. */
+.is-moving .car,
+.is-moving .ceiling-sweep,
+.is-moving .crt-feed,
+.is-moving .osd-rec,
+.is-moving .rec-dot,
+.is-moving .pull-cue,
+.is-moving .grain,
+.is-panning .car,
+.is-panning .ceiling-sweep,
+.is-panning .crt-feed,
+.is-panning .osd-rec,
+.is-panning .rec-dot,
+.is-panning .pull-cue,
+.is-panning .grain {
+  animation-play-state: paused;
+}
+
+/* While a close-up is open the room's own screens keep still as well. A
+   screen that repaints while it is out of shot is not re-rasterised (nobody
+   can see it), so when Back to Room swings it back into view its tiles are
+   stale and it flashes blank for a frame. js/main.js holds the room's clock
+   and CCTV timestamps for the same reason. The close-up's own screen lives
+   in #views, not .room, and keeps running. */
+.is-zoomed .room .crt-feed {
+  animation-play-state: paused;
+}
+
+/* Under this hint Chrome keeps the room's resting raster for every zoom and
+   pan instead of repainting ~390 surfaces at a new scale each time. It only
+   works because js/explore.js tweens the camera itself - see "How the camera
+   moves" there before giving .camera a transform transition or animation. */
+.camera {
+  will-change: transform;
+}
+
+/* Briefly, after a window resize (repinRaster in js/explore.js). */
+.camera.is-unpinned {
+  will-change: auto;
 }
 
 .is-zoomed .fx-bloom {

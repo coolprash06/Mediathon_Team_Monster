@@ -238,6 +238,12 @@
   transition: opacity 0.2s ease;
 }
 
+/* See "a moving camera" in room.css: nothing inside the frame repaints while
+   the camera is travelling. */
+.is-moving .ccrt-static {
+  animation-play-state: paused;
+}
+
 .ccrt.is-switching .ccrt-static {
   opacity: 0.9;
   transition-duration: 0.06s;
@@ -325,11 +331,19 @@
 
 /* ======================================================= cabinet close-up */
 
+/* The wrap is exactly the cabinet's 215x532 footprint - js/explore.js aims the
+   room zoom at this rectangle, so it must not grow. An opened drawer's file
+   rises ~100px ABOVE that footprint though (see .cd.is-open .cd-folder and
+   --open-dy), and on the top row that put the file's tab and its label off the
+   top of the window. --head reserves that headroom inside the slot instead:
+   fitCabinet() divides it out of --k and the cabinet is centred that much
+   lower, leaving the footprint itself untouched. */
 .ccab-wrap {
   --k: 1;
+  --head: 0px;
   position: absolute;
   left: calc(50% - 107.5px * var(--k));
-  top: calc(50% - 266px * var(--k));
+  top: calc(50% + (var(--head) / 2 - 266px) * var(--k));
   width: calc(215px * var(--k));
   height: calc(532px * var(--k));
 }

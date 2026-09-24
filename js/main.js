@@ -126,18 +126,31 @@
     look.ty = (e.clientY / window.innerHeight - 0.5) * 2;
   }, { passive: true });
 
+  var lastEye = '';
+
   function tick() {
-    // While zoomed into a close-up the eye holds still, so the framing that
-    // js/explore.js measured stays lined up with the close-up it cuts to.
-    var held = app.classList.contains('is-zoomed');
+    // The eye holds still while zoomed into a close-up, so the framing that
+    // js/explore.js measured stays lined up with the close-up it cuts to -
+    // and while the camera is moving or the room is being dragged, because
+    // shifting the perspective origin re-projects every surface in the room
+    // and there is no frame budget left for that mid-move (see "a moving
+    // camera" in css/room.css).
+    var held = app.classList.contains('is-zoomed') ||
+      app.classList.contains('is-moving') ||
+      app.classList.contains('is-panning');
     if (motionOn() && !held) {
       look.x += (look.tx - look.x) * 0.06;
       look.y += (look.ty - look.y) * 0.06;
     } else if (!held) {
       look.x = look.y = 0;
     }
-    camera.style.perspectiveOrigin =
-      (EYE_X - look.x * 26).toFixed(2) + 'px ' + (EYE_Y - look.y * 14).toFixed(2) + 'px';
+    var eye = (EYE_X - look.x * 26).toFixed(2) + 'px ' + (EYE_Y - look.y * 14).toFixed(2) + 'px';
+    // Once the easing has settled this is the same string every frame; writing
+    // it anyway would be a style recalc on the room 60 times a second.
+    if (eye !== lastEye) {
+      lastEye = eye;
+      camera.style.perspectiveOrigin = eye;
+    }
     window.requestAnimationFrame(tick);
   }
 
@@ -156,14 +169,23 @@
     var sec = d.getSeconds();
     var min = d.getMinutes() + sec / 60;
     var hr = (d.getHours() % 12) + min / 60;
-    handH.style.transform = 'rotate(' + hr * 30 + 'deg)';
-    handM.style.transform = 'rotate(' + min * 6 + 'deg)';
-    handS.style.transform = 'rotate(' + sec * 6 + 'deg)';
+    // The room holds still while a close-up is open or the camera is moving
+    // (see "a moving camera" in css/room.css): a repaint out of shot comes
+    // back as a blank tile when the room swings into view again. Only the
+    // close-up's own timestamp keeps ticking; the room catches up on landing.
+    var held = app.classList.contains('is-zoomed') || app.classList.contains('is-moving');
+    if (!held) {
+      handH.style.transform = 'rotate(' + hr * 30 + 'deg)';
+      handM.style.transform = 'rotate(' + min * 6 + 'deg)';
+      handS.style.transform = 'rotate(' + sec * 6 + 'deg)';
+    }
 
     // Real time of day, VHS-era date stamp.
     var stamp = pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '-1996 ' + DAYS[d.getDay()] +
       ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(sec);
-    stamps.forEach(function (s) { s.textContent = stamp; });
+    stamps.forEach(function (s) {
+      if (!held || !room.contains(s)) s.textContent = stamp;
+    });
   }
 
   /* ------------------------------------------------------------- sound */
@@ -252,6 +274,12 @@
       }
       document.dispatchEvent(new CustomEvent('rushhour:lit'));
     }
+  });
+
+  // A screen that has finished powering on settles into .is-on (see
+  // .crt-power.is-on in css/room.css for why the animation must not linger).
+  document.addEventListener('animationend', function (e) {
+    if (e.animationName === 'crt-on') e.target.classList.add('is-on');
   });
 
   /* ------------------------------------------------------------- start */

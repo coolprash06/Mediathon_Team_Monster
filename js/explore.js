@@ -40,7 +40,18 @@
    *  parallax an opened drawer would otherwise pick up (see buildCloseCabinet). */
   var CCAB_PERSPECTIVE = 1100;
   var CD_OPEN_Z = 190;
-  var CABINET_EYE_Y = -240;
+  /** Headroom above the cabinet, in close-up px, for the file an open drawer
+   *  lifts clear of its footprint (see --head in views.css). */
+  var CCAB_HEAD = 112;
+
+  /** Close-up px per room px at the cabinets' distance: the room's 1200px
+   *  perspective seen from the cabinet fronts, expressed in the close-up's
+   *  1100px one. Turns a room eye position into a close-up eye position. */
+  var CCAB_EYE_R = CCAB_PERSPECTIVE / (1200 - (geo.drawerZ + geo.drawerDepth / 2));
+  /** How far the room's eye sits above a cabinet's top edge, in close-up px.
+   *  The close-up holds this height so the cabinet keeps the exact angle it
+   *  had in the room; only the sideways offset is levelled out (LEAN_IN). */
+  var CABINET_EYE_Y = -(RH.world.FLOOR - 532) * CCAB_EYE_R;
 
   var reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   function motionOn() { return !reduceQuery.matches; }
@@ -105,9 +116,127 @@
 
   /* ------------------------------------------------------------ the camera */
 
+  /* Every camera move and file flight runs inside .is-moving. See "a moving
+     camera" in room.css for what that class buys: while the camera travels,
+     nothing inside the room repaints, so every frame is drawn purely from
+     tiles that already exist. */
+  var moveTimer = 0;
+
+  function beginMove(dur) {
+    if (!dur) return;
+    app.classList.add('is-moving');
+    window.clearTimeout(moveTimer);
+    // Outlast the tween: the last frame, and the clip and layer changes
+    // that come with settling, must land inside the quiet window too.
+    moveTimer = window.setTimeout(endMove, dur + 120);
+  }
+
+  function endMove() {
+    window.clearTimeout(moveTimer);
+    app.classList.remove('is-moving');
+  }
+
+  /* How the camera moves, and why it is not a CSS transition.
+
+     The room is ~390 composited 3D surfaces. When a CSS transform transition
+     starts, Chrome re-rasterises every layer under it at the animation's
+     MAXIMUM scale - ~4.5x for a desktop, times the screen's pixel ratio - all
+     at once, before the first frame. It cannot, so it skips frames (the
+     stall at the start of a zoom) and then draws with tiles missing (the
+     black patches). Back to Room is worse: the whole room swings into view
+     needing tiles at the zoomed-in scale.
+
+     So the camera is tweened here, one frame at a time, and .camera always
+     carries will-change: transform (room.css). Under that hint, and with no
+     animation for Chrome to plan around, a layer keeps the raster it already
+     has: the room is painted once, at its resting resolution, and every
+     zoom, pan and flight after that only moves those tiles. Nothing is
+     repainted, so nothing can be missing. The price is that the room behind
+     a close-up is an upscaled copy - soft, like a lens focused on the
+     close-up in front of it - which is where the eye is anyway.
+
+     (Do not turn this back into a CSS transition: with the hint on, Chrome
+     would raster the whole room at the zoomed-in scale and keep it there,
+     which does not fit in tile memory and blanks the room entirely.)
+
+     The one-off lift: a pinned layer is never kept below the screen's own
+     pixel density, and the far walls rest below it (they are small in
+     perspective). The first time the camera changes at all, every one of
+     them is repainted up to that floor at once. primeRaster() makes that
+     happen while the room is still dark and fading in, not on the first
+     zoom. */
+  var cam = { z: 1, x: 0, y: 0 };
+  var camFrame = 0;
+
+  /** cubic-bezier(x1, y1, x2, y2) as a function of linear progress 0..1 */
+  function bezier(x1, y1, x2, y2) {
+    function at(a, b, t) { return ((1 - 3 * b + 3 * a) * t + (3 * b - 6 * a)) * t * t + 3 * a * t; }
+    return function (p) {
+      if (p <= 0 || p >= 1) return p <= 0 ? 0 : 1;
+      var lo = 0, hi = 1, t = p;
+      for (var i = 0; i < 24; i++) {
+        t = (lo + hi) / 2;
+        if (at(x1, x2, t) < p) lo = t; else hi = t;
+      }
+      return at(y1, y2, t);
+    };
+  }
+  var zoomEase = bezier(0.65, 0, 0.25, 1); // --zoom-ease in views.css
+
+  function atRest(c) { return Math.abs(c.z - 1) < 1e-4 && Math.abs(c.x) < 0.01 && Math.abs(c.y) < 0.01; }
+
+  function writeCamera() {
+    camera.style.transform = 'translate(' + cam.x.toFixed(2) + 'px,' + cam.y.toFixed(2) + 'px) scale(' + cam.z.toFixed(4) + ')';
+  }
+
   function setCamera(z, x, y, dur) {
-    camera.style.transition = dur ? 'transform ' + dur + 'ms var(--zoom-ease)' : 'none';
-    camera.style.transform = 'translate(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px) scale(' + z.toFixed(4) + ')';
+    var to = { z: z, x: x, y: y };
+    window.cancelAnimationFrame(camFrame);
+    beginMove(dur);
+    if (!dur) {
+      cam = to;
+      writeCamera();
+      return;
+    }
+    var from = { z: cam.z, x: cam.x, y: cam.y };
+    var t0 = -1;
+    camFrame = window.requestAnimationFrame(function step(now) {
+      if (t0 < 0) t0 = now;
+      var p = Math.min(1, (now - t0) / dur);
+      var e = zoomEase(p);
+      cam = { z: from.z + (to.z - from.z) * e, x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e };
+      writeCamera();
+      if (p < 1) camFrame = window.requestAnimationFrame(step);
+    });
+  }
+
+  /** Settle the room's raster before anyone zooms: see "the one-off lift"
+   *  above. A 0.01% nudge of the camera is enough for Chrome to re-evaluate
+   *  every layer; two frames later the camera is back where it was. Only
+   *  ever done with the camera at rest in the room. */
+  function primeRaster() {
+    if (!atRest(cam) || state.view !== 'room') return;
+    camera.style.transform = 'scale(1.0001)';
+    nextFrame().then(nextFrame).then(function () {
+      if (atRest(cam) && state.view === 'room') writeCamera();
+    });
+  }
+
+  /** After a resize: the hint would keep the room at its OLD resting
+   *  resolution (soft, if the window grew). Let go of it for a couple of
+   *  frames so Chrome repaints at the new size, then pin and settle again. */
+  function repinRaster() {
+    // The stage eases to its new fit (.is-fitted .stage in room.css); let
+    // that land first, or Chrome is still mid-animation and changes nothing.
+    var settling = stage.getAnimations().map(function (a) { return a.finished.catch(noop); });
+    Promise.all(settling).then(function () {
+      if (!atRest(cam) || state.view !== 'room') return null;
+      camera.classList.add('is-unpinned');
+      return nextFrame().then(nextFrame).then(function () {
+        camera.classList.remove('is-unpinned');
+        return nextFrame();
+      }).then(primeRaster);
+    });
   }
 
   /** The stage's settled fit, as main.js last set it. */
@@ -120,12 +249,7 @@
     };
   }
 
-  function cameraNow() {
-    var t = window.getComputedStyle(camera).transform;
-    if (!t || t === 'none') return { z: 1, x: 0, y: 0 };
-    var m = new DOMMatrixReadOnly(t);
-    return { z: m.a, x: m.e, y: m.f };
-  }
+  function cameraNow() { return cam; }
 
   /** A room element's on-screen box, in stage px, as if the camera were at rest. */
   function roomBox(node) {
@@ -252,6 +376,7 @@
     travel.style.transform = frames[frames.length - 1].transform;
     if (travelAnim) travelAnim.cancel();
     if (!motionOn()) return Promise.resolve();
+    beginMove(dur); // the folder crosses the room; hold the room still for it
     travelAnim = travel.animate(frames, { duration: dur, easing: easing || 'cubic-bezier(0.45, 0, 0.25, 1)' });
     return travelAnim.finished.catch(noop);
   }
@@ -426,16 +551,19 @@
     }
   })();
 
+  /** Fit the cabinet to its slot, keeping CCAB_HEAD of clear sky above it for
+   *  the file an open drawer lifts out (see --head in views.css). */
   function fitCabinet() {
     var r = cab.wrap.parentNode.getBoundingClientRect();
-    cab.wrap.style.setProperty('--k', Math.max(0.3, Math.min(r.width / 215, r.height / 532)).toFixed(4));
+    cab.wrap.style.setProperty('--head', CCAB_HEAD + 'px');
+    cab.wrap.style.setProperty('--k',
+      Math.max(0.3, Math.min(r.width / 215, r.height / (532 + CCAB_HEAD))).toFixed(4));
   }
 
   /** Where the room's eye sits relative to cabinet ci, in close-up units,
    *  so the first frame of the close-up sees it from the same angle. */
   function roomEye(ci) {
-    var r = 1100 / (1200 - (geo.drawerZ + geo.drawerDepth / 2));
-    return { x: 107.5 - geo.cabinetX[ci] * r, y: -(RH.world.FLOOR - 532) * r };
+    return { x: 107.5 - geo.cabinetX[ci] * CCAB_EYE_R, y: CABINET_EYE_Y };
   }
 
   function setEye(p) {
@@ -443,6 +571,11 @@
     cab.box.style.setProperty('--eye-y', p.y.toFixed(1) + 'px');
   }
 
+  /** The cabinets stand off to the right of the room, so the room sees them
+   *  from their left. The close-up slides the eye round to dead centre, which
+   *  is what "look closer" means here - and keeps the room's own height, so
+   *  the cabinet settles front-on at the angle it already had rather than
+   *  tipping into a plan view the visitor never asked for. */
   var LEAN_IN = { x: 107.5, y: CABINET_EYE_Y };
 
   function dressCabinet(ci) {
@@ -841,10 +974,27 @@
     v.classList.remove('is-active');
   }
 
+  /** Take the room out of reach while a close-up owns the screen.
+   *
+   *  `inert` on #viewport is the obvious tool and was the wrong one: setting
+   *  it re-resolves style for all ~390 surfaces in the room at once, and the
+   *  compositor spends two frames rebuilding layers it has not painted yet -
+   *  landing a near-empty room on screen at exactly the moment a zoom starts
+   *  or a Back to Room lands. Reaching for the handful of controls that can
+   *  actually take focus costs nothing. Pointer and hover are already handled:
+   *  every hotspot goes through canExplore(), which is false unless the view
+   *  is the room and no flow is running, and the lamp's chain disables itself
+   *  once it has been pulled. */
+  function setRoomReachable(on) {
+    if (on) viewport.removeAttribute('aria-hidden');
+    else viewport.setAttribute('aria-hidden', 'true');
+    scene.monitors.concat(scene.cabinets).forEach(function (n) { n.tabIndex = on ? 0 : -1; });
+  }
+
   function enterZoom() {
     setHot(null);
     app.classList.add('is-zoomed', 'has-explored');
-    viewport.inert = true;
+    setRoomReachable(false);
   }
 
   /** Straight back to the full lit room, tidying up whatever was left out. */
@@ -881,7 +1031,7 @@
     state.origin = null;
     state.busy = false;
     app.classList.remove('is-zoomed');
-    viewport.inert = false;
+    setRoomReachable(true);
     if (origin && lastInput === 'key') origin.focus({ preventScroll: true });
     else if (document.activeElement && document.activeElement.closest('#views')) document.activeElement.blur();
   }
@@ -907,9 +1057,21 @@
     }
   }
 
+  var primeTimer = 0;
   window.addEventListener('resize', function () {
     if (state.view !== 'room' && !state.busy) window.requestAnimationFrame(reframe);
+    // A new window size is a new resting scale for the room: settle its
+    // raster again once the resizing stops.
+    window.clearTimeout(primeTimer);
+    primeTimer = window.setTimeout(repinRaster, 400);
   });
+
+  // First settle: once the (still dark) room has faded in, long before the
+  // lamp can have been found and the first zoom asked for.
+  (function whenReady() {
+    if (app.classList.contains('is-ready')) window.setTimeout(primeRaster, 1600);
+    else window.setTimeout(whenReady, 200);
+  })();
 
   var lastInput = 'pointer';
   window.addEventListener('pointerdown', function () { lastInput = 'pointer'; }, true);
