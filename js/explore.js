@@ -30,7 +30,11 @@
   var geo = RH.world.file;
   var photos = RH.photos || [];
 
-  var TIMES = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+  var TIMES = {
+    'morning-rush': 'Morning Rush',
+    'afternoon-rush': 'Afternoon Rush',
+    'peak-rush': 'Peak Rush'
+  };
   /** How far a room drawer slides out (matches .drawer.is-pulled in room.css) */
   var ROOM_PULL = 170;
   var ZOOM_MS = 1100;
@@ -103,7 +107,7 @@
     view: 'room', // room | monitor | cabinet | desk | spread
     busy: false,
     origin: null, // the room object to hand focus back to
-    slot: null, // monitor: morning | afternoon | evening
+    slot: null, // monitor: morning-rush | afternoon-rush | peak-rush
     slides: [],
     index: 0,
     cabinet: -1,
