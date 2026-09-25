@@ -251,7 +251,16 @@
 
   /* -------------------------------------------------------------- lamp */
 
-  var hintTimer = window.setTimeout(function () { app.classList.add('show-hint'); }, 2600);
+  // The lamp hint waits until the CRT boot screen (js/boot.js) has cleared.
+  var hintTimer = null;
+  function armHint() {
+    hintTimer = window.setTimeout(function () { app.classList.add('show-hint'); }, 2600);
+  }
+  if (RH.boot && !RH.boot.done) {
+    document.addEventListener('rushhour:booted', armHint, { once: true });
+  } else {
+    armHint();
+  }
 
   RH.lamp = RH.createLamp({
     app: app,

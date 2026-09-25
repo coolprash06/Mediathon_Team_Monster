@@ -278,6 +278,17 @@
 
   /* ---------------------------------------------------------- file cabinets */
 
+  /** What stands on top of the cabinets, in groups that sit side by side:
+   *  the row of binders, then the archive box. Same box() measurements (x/z
+   *  footprint centre, y bottom face). js/explore.js cuts these out of the
+   *  cabinet close-up, which is drawn over them. */
+  var ON_CABINETS = [
+    [0, 1, 2, 3, 4, 5].map(function (k) {
+      return { w: 26, h: 118 - (k % 3) * 6, d: 110, x: 437 + k * 29, y: FLOOR - 532, z: -900 };
+    }),
+    [{ w: 170, h: 70, d: 150, x: 735, y: FLOOR - 532, z: -890 }]
+  ];
+
   var CABINETS = [
     { x: 505, drawers: ['Canteen', 'Outdoor', 'Mini Mart', ''] },
     { x: 735, drawers: ['Student Lounge', 'Corridors', 'Sports Complex', ''] }
@@ -483,12 +494,13 @@
 
     // A few binders and a box file on top of the cabinets
     var binderColors = ['#6d2a22', '#23344d', '#3b3b36', '#6b5a2a', '#23344d', '#51261f'];
-    binderColors.forEach(function (c, k) {
-      var b = box(room, { w: 26, h: 118 - (k % 3) * 6, d: 110, x: 437 + k * 29, y: FLOOR - 532, z: -900, mat: 'm-binder' });
-      b.style.setProperty('--tint', c);
+    ON_CABINETS[0].forEach(function (spec, k) {
+      var b = box(room, { w: spec.w, h: spec.h, d: spec.d, x: spec.x, y: spec.y, z: spec.z, mat: 'm-binder' });
+      b.style.setProperty('--tint', binderColors[k]);
       el('span', 'binder-label', b.faces.front);
     });
-    box(room, { w: 170, h: 70, d: 150, x: 735, y: FLOOR - 532, z: -890, mat: 'm-cardboard', cls: 'archive-box' });
+    var archive = ON_CABINETS[1][0];
+    box(room, { w: archive.w, h: archive.h, d: archive.d, x: archive.x, y: archive.y, z: archive.z, mat: 'm-cardboard', cls: 'archive-box' });
     groundShadow(room, 515, FLOOR - 532, -900, 210, 150, 0.8);
     groundShadow(room, 735, FLOOR - 532, -890, 210, 180, 0.8);
 
@@ -524,5 +536,5 @@
     return RH.scene;
   };
 
-  RH.world = { FLOOR: FLOOR, CEIL: CEIL, BACK: BACK, FRONT: FRONT, HALF_W: HALF_W, file: fileGeometry() };
+  RH.world = { FLOOR: FLOOR, CEIL: CEIL, BACK: BACK, FRONT: FRONT, HALF_W: HALF_W, file: fileGeometry(), onCabinets: ON_CABINETS };
 })();

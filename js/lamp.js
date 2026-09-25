@@ -25,7 +25,7 @@
   /** Hard stop so the chain cannot be dragged into the desk. */
   var MAX_TRAVEL = 60;
   /** How far the chain must travel before a drag counts as a pull. */
-  var PULL_THRESHOLD = MAX_TRAVEL * (0.065 / 0.15);
+  var PULL_THRESHOLD = 26;
   /** Screen px of pointer travel that takes the chain to MAX_TRAVEL (~78px). */
   var DRAG_FOR_MAX = 78;
   /** Pointer travel under this (screen px) is a click, not a drag. */
@@ -41,7 +41,7 @@
   var IDLE_SWAY_DEG = 0.7;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
-  /** Frame-rate independent exponential approach (same maths as MathUtils.damp). */
+  /** Frame-rate independent exponential approach: closes 1 - e^(-lambda*dt) of the gap each frame. */
   function damp(from, to, lambda, dt) { return from + (to - from) * (1 - Math.exp(-lambda * dt)); }
 
   /**

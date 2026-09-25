@@ -195,11 +195,51 @@
 
   function writeCamera() {
     camera.style.transform = 'translate(' + cam.x.toFixed(2) + 'px,' + cam.y.toFixed(2) + 'px) scale(' + cam.z.toFixed(4) + ')';
+    if (rider) rider();
+  }
+
+  /* A close-up fades in over the room before the camera has landed. Parked at
+     the rectangle the camera is flying toward, it would stand still while the
+     room under it finishes the move, and the room's own props on top of the
+     cabinet (the binders and archive box are drawn by the room, not the
+     close-up) would slide across it - the further the camera travels, the
+     more. rideCamera() binds the close-up to the camera tween instead: every
+     frame writeCamera() draws, the close-up gets the same 2D move the room
+     just got, relative to where the camera will land. On landing that is no
+     move at all, and it lets go. */
+  var rider = null;
+  var camTo = cam;
+
+  function rideCamera(node) {
+    dropRider();
+    var to = camTo;
+    var f = stageFit();
+    var r = node.getBoundingClientRect();
+    // Scale about the window's corner (#views is fixed there), so the move
+    // below is in client px: the room goes client = f + f.s * (cam + cam.z * p)
+    node.style.transformOrigin = -r.left + 'px ' + -r.top + 'px';
+    rider = function () {
+      var k = cam.z / to.z;
+      node.style.transform = 'translate(' +
+        (f.s * (cam.x - k * to.x) + f.x * (1 - k)).toFixed(2) + 'px,' +
+        (f.s * (cam.y - k * to.y) + f.y * (1 - k)).toFixed(2) + 'px) scale(' + k.toFixed(5) + ')';
+    };
+    rider.node = node;
+    rider();
+  }
+
+  function dropRider() {
+    if (!rider) return;
+    rider.node.style.transform = '';
+    rider.node.style.transformOrigin = '';
+    rider = null;
   }
 
   function setCamera(z, x, y, dur) {
     var to = { z: z, x: x, y: y };
     window.cancelAnimationFrame(camFrame);
+    dropRider(); // a new move is not the one the close-up was riding
+    camTo = to;
     beginMove(dur);
     if (!dur) {
       cam = to;
@@ -215,6 +255,7 @@
       cam = { z: from.z + (to.z - from.z) * e, x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e };
       writeCamera();
       if (p < 1) camFrame = window.requestAnimationFrame(step);
+      else dropRider();
     });
   }
 
@@ -334,11 +375,12 @@
   /** Pulling a room drawer toward the eye also drags it toward the eye's
    *  vanishing point - down over the drawer below, and sideways. Offset it so
    *  it grows in place about its front, as the close-up's drawers do (setEye);
-   *  the file it holds moves with it (fileAt). */
+   *  the file it holds moves with it (fileAt). Sideways only where the
+   *  cabinet's own side is on show (see sideHidden). */
   function pullOffset(ci, k) {
     var e = roomEyeWorld();
     return {
-      x: (e.x - geo.cabinetX[ci]) * ROOM_PULL / FRONT_D,
+      x: sideHidden(ci) ? 0 : (e.x - geo.cabinetX[ci]) * ROOM_PULL / FRONT_D,
       y: (e.y - (geo.drawerTop(k) + 62)) * ROOM_PULL / FRONT_D
     };
   }
@@ -401,7 +443,7 @@
    *  room point that projects to the same place at the same scale. */
   function liftedAt(ci, k) {
     var p = roomEye(ci);
-    var od = openDrift(p, k);
+    var od = openDrift(p, k, ci);
     var s = CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - (CD_OPEN_Z + CD_LIFT.z));
     var cx = 107.5 + od.x; // the folder's centre, close-up px
     var cy = 8 + 128 * k + 4 + 54 + CD_LIFT.y + od.y;
@@ -629,10 +671,22 @@
     };
   }
 
-  /** --open-dx / --open-dy for close-up drawer k seen from eye p (see setEye). */
-  function openDrift(p, k) {
+  /** Is cabinet ci's left side hidden by a neighbour? Then nothing on screen
+   *  shows the cabinet's own angle, and a drawer held in place sideways (see
+   *  setEye) no longer reads as sliding out of it: its side wall runs off
+   *  over the neighbour instead of back into its slot. Such a drawer slides
+   *  straight out, as in life, and takes the sideways drift. */
+  function sideHidden(ci) {
+    return ci > 0;
+  }
+
+  /** --open-dx / --open-dy for close-up drawer k of cabinet ci seen from eye p (see setEye). */
+  function openDrift(p, k, ci) {
     var shrink = -CD_OPEN_Z / CCAB_PERSPECTIVE;
-    return { x: (107.5 - p.x) * shrink, y: (8 + 128 * k + 62 - p.y) * shrink };
+    return {
+      x: sideHidden(ci) ? 0 : (107.5 - p.x) * shrink,
+      y: (8 + 128 * k + 62 - p.y) * shrink
+    };
   }
 
   function setEye(p) {
@@ -642,19 +696,178 @@
     // eye's vanishing point - down/up enough for a middle drawer to slide over
     // the labelled drawer below it, and sideways since the eye is off to the
     // cabinet's left. Counter that drift so opening a drawer only grows it in
-    // place, whatever row it's in.
+    // place, whatever row it's in (sideways too, unless sideHidden).
     cab.drawers.forEach(function (d, k) {
-      var od = openDrift(p, k);
+      var od = openDrift(p, k, state.cabinet);
       d.el.style.setProperty('--open-dx', od.x.toFixed(1) + 'px');
       d.el.style.setProperty('--open-dy', od.y.toFixed(1) + 'px');
     });
+    cabEye = p;
+    cabRoomEye = roomEyeWorld();
+    clipToRoom();
   }
+
+  /* In the room, the neighbouring cabinet stands flush against this one and
+     hides everything of it that lies behind the shared front plane on that
+     side: its side panel, and the dark inside that shows once that panel is
+     gone. The close-up is drawn over the room, so it has to cut that away
+     itself. Seen from the room's eye (off to the cabinets' left), all of it
+     projects into one quad beside the front edge: the side panel's own
+     outline. Clip that quad out, then put back whatever pokes out in front of
+     the front plane (an opened drawer, a raised file), since the neighbour
+     can't hide those. The drawers move, so the clip follows them each frame
+     while they do.
+
+     The binders and archive box standing on the cabinets hide the back of
+     their tops in just the same way, so they are cut out too - where the room
+     draws them, on the same terms (a raised file still passes in front). */
+  var CCAB_DEPTH = 280;
+  var cabEye = null;
+  var cabRoomEye = null;
+  var clipUntil = 0;
+  var clipRaf = 0;
+
+  function projectCab(x, y, z) {
+    var s = CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - z);
+    return [cabEye.x + (x - cabEye.x) * s, cabEye.y + (y - cabEye.y) * s];
+  }
+
+  /** Where the room draws room point (x, y, z), in close-up px: the room's
+   *  own projection, which is 1:1 with the close-up across the cabinet front. */
+  function projectRoom(ci, x, y, z) {
+    var left = geo.cabinetX[ci] - 107.5;
+    var ex = cabRoomEye.x - left;
+    var ey = cabRoomEye.y - CABINET_TOP_Y;
+    var f = FRONT_D / (1200 - z);
+    return [ex + (x - left - ex) * f, ey + (y - CABINET_TOP_Y - ey) * f];
+  }
+
+  /** Signed area (screen y down: positive = clockwise). */
+  function polyArea(pts) {
+    var a = 0;
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i], q = pts[(i + 1) % pts.length];
+      a += p[0] * q[1] - q[0] * p[1];
+    }
+    return a / 2;
+  }
+
+  function convexHull(pts) {
+    pts = pts.slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    var cross = function (o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); };
+    var lo = [], hi = [];
+    pts.forEach(function (p) {
+      while (lo.length > 1 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+      lo.push(p);
+    });
+    for (var i = pts.length - 1; i >= 0; i--) {
+      while (hi.length > 1 && cross(hi[hi.length - 2], hi[hi.length - 1], pts[i]) <= 0) hi.pop();
+      hi.push(pts[i]);
+    }
+    return lo.slice(0, -1).concat(hi.slice(0, -1));
+  }
+
+  /** One nonzero-rule subpath, wound clockwise (keep) or anticlockwise (cut). */
+  function subpath(pts, keep) {
+    if ((polyArea(pts) > 0) !== keep) pts = pts.slice().reverse();
+    return 'M' + pts.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('L') + 'Z';
+  }
+
+  /** Current translation of a close-up part (they only ever translate). */
+  function shift(node) {
+    var t = getComputedStyle(node).transform;
+    var m = t && t !== 'none' ? new DOMMatrixReadOnly(t) : null;
+    return m ? { x: m.m41, y: m.m42, z: m.m43 } : { x: 0, y: 0, z: 0 };
+  }
+
+  function clipToRoom() {
+    var ci = state.cabinet;
+    if (!cabEye || ci < 0) return;
+    var cuts = [];
+    var near = CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE + CCAB_DEPTH);
+    [[ci > 0, 0], [ci < scene.cabinets.length - 1, 215]].forEach(function (side) {
+      // Only a side the eye can see round: its back edge lands outside the front
+      var backX = cabEye.x + (side[1] - cabEye.x) * near;
+      if (!side[0] || (side[1] === 0 ? backX >= 0 : backX <= 215)) return;
+      cuts.push([[side[1], 0], [side[1], 532], projectCab(side[1], 532, -CCAB_DEPTH), projectCab(side[1], 0, -CCAB_DEPTH)]);
+    });
+    // One hull per group, so no two cuts overlap (that would undo the cut)
+    RH.world.onCabinets.forEach(function (group) {
+      var pts = [];
+      group.forEach(function (b) {
+        [b.x - b.w / 2, b.x + b.w / 2].forEach(function (x) {
+          [b.y, b.y - b.h].forEach(function (y) {
+            [b.z - b.d / 2, b.z + b.d / 2].forEach(function (z) { pts.push(projectRoom(ci, x, y, z)); });
+          });
+        });
+      });
+      cuts.push(convexHull(pts));
+    });
+
+    var keeps = [];
+    cab.drawers.forEach(function (d, k) {
+      var t = shift(d.el);
+      var x0 = 5 + t.x, y0 = 8 + 128 * k + t.y;
+      var front = t.z + 2;
+      if (front > 0) {
+        // The drawer, from its front back to the shared front plane
+        var cut = Math.max(t.z - 262, 0);
+        keeps.push(convexHull([
+          projectCab(x0, y0, front), projectCab(x0 + 205, y0, front),
+          projectCab(x0, y0 + 124, front), projectCab(x0 + 205, y0 + 124, front),
+          projectCab(x0 + 3, y0 + 14, cut), projectCab(x0 + 202, y0 + 14, cut),
+          projectCab(x0 + 3, y0 + 120, cut), projectCab(x0 + 202, y0 + 120, cut)
+        ]));
+      }
+      d.el.querySelectorAll('.cd-folder').forEach(function (f) {
+        if (getComputedStyle(f).visibility === 'hidden') return;
+        var ft = shift(f);
+        var z = t.z + ft.z;
+        if (z <= 0) return;
+        var fx = x0 + f.offsetLeft + ft.x, fy = y0 + f.offsetTop + ft.y;
+        var tab = f.querySelector('.cd-tab');
+        [[0, 0, f.offsetWidth, f.offsetHeight],
+          [tab.offsetLeft, tab.offsetTop, tab.offsetWidth, tab.offsetHeight]].forEach(function (r) {
+          keeps.push([
+            projectCab(fx + r[0], fy + r[1], z), projectCab(fx + r[0] + r[2], fy + r[1], z),
+            projectCab(fx + r[0] + r[2], fy + r[1] + r[3], z), projectCab(fx + r[0], fy + r[1] + r[3], z)
+          ]);
+        });
+      });
+    });
+
+    var big = 5000;
+    var path = subpath([[-big, -big], [big, -big], [big, big], [-big, big]], true);
+    cuts.forEach(function (q) { path += subpath(q, false); });
+    keeps.forEach(function (h) { path += subpath(h, true); });
+    cab.box.style.clipPath = 'path(nonzero, "' + path + '")';
+  }
+
+  /** Keep the clip on the drawers while their transitions play. */
+  function followDrawers(dur) {
+    clipUntil = Math.max(clipUntil, performance.now() + dur);
+    if (clipRaf) return;
+    clipRaf = window.requestAnimationFrame(function tick() {
+      clipToRoom();
+      clipRaf = performance.now() < clipUntil ? window.requestAnimationFrame(tick) : 0;
+    });
+  }
+
+  cab.box.addEventListener('transitionrun', function () { followDrawers(1600); });
+  cab.box.addEventListener('transitionend', function () { followDrawers(100); });
 
   function dressCabinet(ci) {
     state.cabinet = ci;
     state.drawer = -1;
     cab.title.textContent = 'Filing cabinet ' + (ci + 1);
     cab.view.classList.remove('is-handed-off');
+    // In the room, a neighbouring cabinet hides this one's side panel on that
+    // side. The close-up is drawn over the room, so it has to drop that panel
+    // itself - or it sweeps across the neighbour (cabinet 2's left side over
+    // cabinet 1). What lay behind that panel is clipped away in
+    // clipToRoom.
+    cab.box.classList.toggle('has-neighbour-l', ci > 0);
+    cab.box.classList.toggle('has-neighbour-r', ci < scene.cabinets.length - 1);
     instantly(cab.box, function () {
       cab.drawers.forEach(function (d, k) {
         var src = roomDrawers[ci][k];
@@ -693,12 +906,15 @@
     await nextFrame();
     if (id !== flow) return;
     aim(roomBox(cavityOf(ci)), screenBox(cab.wrap.getBoundingClientRect()), ms(ZOOM_MS));
+    rideCamera(cab.wrap);
     await wait(ZOOM_MS - 300);
     if (id !== flow) return;
     showView(cab.view);
-    hideRoomCabinet(ci); // the close-up now covers it exactly; stop trusting alignment
     await wait(450);
     if (id !== flow) return;
+    // Only once the close-up is fully in: hidden any sooner, the cabinet is
+    // missing for the first frames of the fade and its props float on nothing.
+    hideRoomCabinet(ci); // the close-up now covers it exactly; stop trusting alignment
     state.busy = false;
     var first = cab.drawers.filter(function (d) { return d.label; })[0];
     if (first) first.front.focus({ preventScroll: true });
@@ -1082,13 +1298,14 @@
     updateCabinetActions();
     fitCabinet();
     aim(roomBox(cavityOf(f.cabinet)), screenBox(cab.wrap.getBoundingClientRect()), ms(900));
+    rideCamera(cab.wrap);
     await wait(850);
     if (id !== flow) return;
     showView(cab.view); // shut, the close-up matches the room's cabinet
-    hideRoomCabinet(f.cabinet);
     state.view = 'cabinet';
     await wait(450);
     if (id !== flow) return;
+    hideRoomCabinet(f.cabinet); // once the close-up is fully in (see openCabinet)
     state.file = null;
     state.busy = false;
     d.front.focus({ preventScroll: true });
