@@ -46,12 +46,14 @@
     { src: 'assets/photos/rush-24.jpg', time: 'afternoon-rush', location: 'student-lounge', caption: 'Groups meeting in the student lounge' },
     { src: 'assets/photos/rush-25.jpg', time: 'afternoon-rush', location: 'student-lounge', caption: 'Lounge seating filling through the afternoon' },
     { src: 'assets/photos/rush-26.jpg', time: 'afternoon-rush', location: 'student-lounge', caption: 'Students passing through the lounge' },
-    { src: 'assets/photos/rush-27.jpg', time: 'peak-rush', location: 'mini-mart', caption: 'Crowd outside Mini Mart' },
     { src: 'assets/photos/rush-28.jpg', time: 'peak-rush', location: 'sports-complex', caption: 'Crowd gathering after a fun game' },
     { src: 'assets/photos/rush-29.jpg', time: 'peak-rush', location: 'outdoor', caption: 'Outdoor crowd moving between buildings' },
     { src: 'assets/photos/rush-30.jpg', time: 'afternoon-rush', location: 'outdoor', caption: 'Campus walkway at lunchtime' },
     { src: 'assets/photos/rush-31.jpg', time: 'peak-rush', location: 'outdoor', caption: 'Students converging at the outdoor stalls' },
     { src: 'assets/photos/rush-32.jpg', time: 'afternoon-rush', location: 'canteen', caption: 'Students seated in the canteen' },
-    { src: 'assets/photos/rush-33.jpg', time: 'afternoon-rush', location: 'canteen', caption: 'Canteen tables during the lunch rush' }
+    { src: 'assets/photos/rush-33.jpg', time: 'afternoon-rush', location: 'canteen', caption: 'Canteen tables during the lunch rush' },
+    { src: 'assets/photos/rush-34.jpg', time: 'peak-rush', location: 'mini-mart', caption: 'Students crowding the Mini Mart counter at peak rush' },
+    { src: 'assets/photos/rush-35.jpg', time: 'peak-rush', location: 'mini-mart', caption: 'A packed Mini Mart during the midday rush' },
+    { src: 'assets/photos/rush-36.jpg', time: 'afternoon-rush', location: 'mini-mart', caption: 'Students gathering outside the Mini Mart entrance' }
   ];
 })();

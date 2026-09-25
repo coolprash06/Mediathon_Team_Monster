@@ -41,10 +41,12 @@ both a rush-phase monitor and its location drawer.
 | `24.jpg` | `rush-24.jpg` | Afternoon Rush | Student Lounge | 2026-09-24 13:39 — groups in the student lounge |
 | `25.jpg` | `rush-25.jpg` | Afternoon Rush | Student Lounge | 2026-09-24 13:39 — lounge seating |
 | `26.jpg` | `rush-26.jpg` | Afternoon Rush | Student Lounge | 2026-09-24 14:02 — students passing through |
-| `27.jpg` | `rush-27.jpg` | Peak Rush | Mini Mart | No readable EXIF — Mini Mart crowd |
 | `28.jpg` | `rush-28.jpg` | Peak Rush | Sports Complex | No readable EXIF — sports festival crowd |
 | `29.jpg` | `rush-29.jpg` | Peak Rush | Outdoor | No readable EXIF — outdoor foot traffic |
 | `30.HEIC` | `rush-30.jpg` | Afternoon Rush | Outdoor | 2026-09-24 12:59 — campus walkway |
 | `31.HEIC` | `rush-31.jpg` | Peak Rush | Outdoor | 2026-09-24 13:07 — students at outdoor stalls |
 | `32.jpg` | `rush-32.jpg` | Afternoon Rush | Canteen | 2026-09-24 13:18 — canteen seating |
 | `33.jpg` | `rush-33.jpg` | Afternoon Rush | Canteen | 2026-09-24 13:18 — lunch tables |
+| `new minimart pics/Upload this Krish 2.HEIC` | `rush-34.jpg` | Peak Rush | Mini Mart | 2026-09-24 13:11 — dense crowd at the Mini Mart counter |
+| `new minimart pics/Upload this Krish 3.HEIC` | `rush-35.jpg` | Peak Rush | Mini Mart | 2026-09-24 13:10 — packed Mini Mart aisle |
+| `new minimart pics/Upload tHIS Krish.HEIC` | `rush-36.jpg` | Afternoon Rush | Mini Mart | 2026-09-24 13:12 — students gathering at the Mini Mart entrance |
