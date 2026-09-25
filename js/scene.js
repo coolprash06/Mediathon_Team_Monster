@@ -167,9 +167,9 @@
   /* ------------------------------------------------ monitor counter + CRTs */
 
   var SLOTS = [
-    { x: -880, cam: 'CAM 01', label: 'Morning', id: 'morning' },
-    { x: -450, cam: 'CAM 02', label: 'Afternoon', id: 'afternoon' },
-    { x: -20, cam: 'CAM 03', label: 'Evening', id: 'evening' }
+    { x: -880, cam: 'CAM 01', label: 'Morning Rush', id: 'morning-rush' },
+    { x: -450, cam: 'CAM 02', label: 'Afternoon Rush', id: 'afternoon-rush' },
+    { x: -20, cam: 'CAM 03', label: 'Peak Rush', id: 'peak-rush' }
   ];
 
   function buildCounter(room) {

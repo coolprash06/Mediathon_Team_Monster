@@ -122,11 +122,11 @@ directly):
 - Once lit: 3 desktops + 2 file cabinets (4 drawers each = 8 drawers total)
   are visible and clickable.
 
-DESKTOPS (time-of-day, one photo set each):
-- Desktop 1 = Morning, Desktop 2 = Afternoon, Desktop 3 = Evening.
+DESKTOPS (rush-hour phases, one photo set each):
+- Desktop 1 = Morning Rush, Desktop 2 = Afternoon Rush, Desktop 3 = Peak Rush.
 - Click a desktop -> camera/view zooms to a front-on view of that screen.
 - Below the screen: a button reading "Click to See Pictures from the
-  [Morning/Afternoon/Evening]" (per-desktop label).
+  [Morning Rush/Afternoon Rush/Peak Rush]" (per-desktop label).
 - Clicking the button starts a one-at-a-time slideshow of that time
   window's photos, regardless of location.
 - Slideshow nav: "<-" icon/button bottom-left of screen (previous image),

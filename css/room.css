@@ -658,12 +658,12 @@ body {
   animation: static 0.5s steps(5) infinite;
 }
 
-.crt-feed--afternoon {
+.crt-feed--afternoon-rush {
   background-color: #000;
   filter: hue-rotate(-10deg) brightness(1.08);
 }
 
-.crt-feed--evening {
+.crt-feed--peak-rush {
   filter: sepia(0.35) brightness(0.9);
 }
 
