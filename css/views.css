@@ -872,10 +872,66 @@
   letter-spacing: 0.18em;
 }
 
+/* Across the top of the sheet, either side of the clip: flips the left-hand
+   index when it runs long. Next sits top-right, Prev (when there is one)
+   top-left. */
+.index-pager {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  pointer-events: none;
+}
+
+.index-pager .index-nav {
+  pointer-events: auto;
+}
+
+#index-next {
+  margin-left: auto;
+}
+
+.index-pager[hidden],
+.index-nav[hidden] {
+  display: none;
+}
+
+.index-nav {
+  padding: 5px 8px;
+  border: 1.5px solid rgba(43, 38, 28, 0.6);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 700 clamp(11px, calc(10px / var(--k)), 15px)/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.index-nav:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.index-nav:focus-visible {
+  outline: 2px solid var(--lamp-warm);
+  outline-offset: 3px;
+}
+
 /* The nav and captions only matter once the folder is open */
 .view--desk:not(.is-spread) .sheet-nav,
+.view--desk:not(.is-spread) .index-pager,
 .view--desk:not(.is-spread) .rec-list {
   visibility: hidden;
+}
+
+/* Narrow screens show only the photo page, so there's no index to flip */
+.view--desk.is-single .index-pager {
+  display: none;
 }
 
 /* Front cover: hinged on the left edge, swings over to become the left page */

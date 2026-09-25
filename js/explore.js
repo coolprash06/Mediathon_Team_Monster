@@ -700,6 +700,9 @@
     count: $('page-count'),
     prev: $('page-prev'),
     next: $('page-next'),
+    pager: $('index-pager'),
+    indexPrev: $('index-prev'),
+    indexNext: $('index-next'),
     open: $('file-open'),
     ret: $('file-return'),
     close: $('file-close')
@@ -794,6 +797,7 @@
       cam.setProperty('--tilt', '0deg');
       cam.setProperty('--dx', (cx + (single ? 0 : PAGE_W / 2 * k)).toFixed(1) + 'px');
       cam.setProperty('--dy', cy.toFixed(1) + 'px');
+      desk.view.classList.toggle('is-single', single); // no index page to flip
       desk.sheet.style.setProperty('--k', k.toFixed(4));
     } else {
       var kd = Math.min(aw * 0.62 / PAGE_W, ah * 0.95 / PAGE_H);
@@ -823,7 +827,57 @@
       b.addEventListener('click', function () { showPage(i); });
     });
     desk.prev.hidden = desk.next.hidden = n < 2;
+    paginateIndex();
     showPage(0, true);
+  }
+
+  /* The index page is a fixed size (the whole folder is scaled as one), so
+     however the entries wrap, the split into pages is measured once per file. */
+  function paginateIndex() {
+    var f = state.file;
+    var items = desk.recList.children;
+    var room = desk.recList.clientHeight;
+    var starts = [0];
+    Array.prototype.forEach.call(items, function (li) { li.hidden = false; });
+    for (var i = 1; i < items.length && room > 0; i++) {
+      var top = items[starts[starts.length - 1]].offsetTop;
+      if (items[i].offsetTop + items[i].offsetHeight - top > room) starts.push(i);
+    }
+    f.indexPages = starts;
+    f.indexPage = -1;
+    showIndexPage(0);
+  }
+
+  function indexPageOf(i) {
+    var starts = state.file.indexPages;
+    var p = 0;
+    while (p + 1 < starts.length && starts[p + 1] <= i) p++;
+    return p;
+  }
+
+  function showIndexPage(p) {
+    var f = state.file;
+    var starts = f.indexPages;
+    p = Math.max(0, Math.min(starts.length - 1, p));
+    if (p === f.indexPage) return;
+    f.indexPage = p;
+    var from = starts[p];
+    var to = p + 1 < starts.length ? starts[p + 1] : Infinity;
+    Array.prototype.forEach.call(desk.recList.children, function (li, j) {
+      li.hidden = j < from || j >= to;
+    });
+    desk.pager.hidden = starts.length < 2;
+    desk.indexPrev.hidden = p === 0;
+    desk.indexNext.hidden = p === starts.length - 1;
+  }
+
+  function stepIndexPage(d) {
+    if (state.view !== 'spread' || !state.file) return;
+    showIndexPage(state.file.indexPage + d);
+    // Don't strand keyboard focus on a button that has just hidden itself
+    var other = d > 0 ? desk.indexPrev : desk.indexNext;
+    var self = d > 0 ? desk.indexNext : desk.indexPrev;
+    if (self.hidden && document.activeElement === self) other.focus({ preventScroll: true });
   }
 
   var pageToken = 0;
@@ -847,6 +901,8 @@
       b.setAttribute('aria-current', j === f.index ? 'true' : 'false');
     });
     desk.count.textContent = pad(f.index + 1) + ' / ' + pad(n);
+    // Keep the highlighted entry on the index page in view
+    if (indexPageOf(f.index) !== f.indexPage) showIndexPage(indexPageOf(f.index));
 
     if (!instant && motionOn()) {
       await desk.print.animate([
@@ -966,6 +1022,8 @@
   desk.close.addEventListener('click', closeFile);
   desk.prev.addEventListener('click', function () { stepPage(-1); });
   desk.next.addEventListener('click', function () { stepPage(1); });
+  desk.indexPrev.addEventListener('click', function () { stepIndexPage(-1); });
+  desk.indexNext.addEventListener('click', function () { stepIndexPage(1); });
 
   /* ============================================================ navigation */
 

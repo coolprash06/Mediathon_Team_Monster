@@ -110,6 +110,11 @@
               <!-- Right-hand page: the prints -->
               <div class="folder-sheet">
                 <span class="sheet-clip" aria-hidden="true"></span>
+                <!-- Pages through the left-hand index when it runs long -->
+                <div class="index-pager" id="index-pager" hidden>
+                  <button type="button" class="index-nav" id="index-prev" aria-label="Previous index page">&lt;- Prev page</button>
+                  <button type="button" class="index-nav" id="index-next" aria-label="Next index page">Next page -&gt;</button>
+                </div>
                 <div class="print-area">
                   <figure class="print" id="print">
                     <img id="print-img" alt="">
