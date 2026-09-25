@@ -279,7 +279,7 @@
   /* ---------------------------------------------------------- file cabinets */
 
   var CABINETS = [
-    { x: 505, drawers: ['Canteen', 'Outdoor', 'MTH Mall', ''] },
+    { x: 505, drawers: ['Canteen', 'Outdoor', 'Mini Mart', ''] },
     { x: 735, drawers: ['Student Lounge', 'Corridors', 'Sports Complex', ''] }
   ];
 

@@ -15,9 +15,9 @@ both a rush-phase monitor and its location drawer.
 
 | Source | Site copy | Rush phase | Location file | Capture time / note |
 | --- | --- | --- | --- | --- |
-| `1.jpg` | `rush-01.jpg` | Morning Rush | Student Lounge | 2026-09-24 09:55 — students settling into MTH Mall lounge |
-| `2.jpg` | `rush-02.jpg` | Peak Rush | Outdoor | No readable EXIF — shaded campus walkway |
-| `3.JPG` | `rush-03.jpg` | Peak Rush | MTH Mall | 2026-09-23 15:45 — crowd outside MTH Mall |
+| `1.jpg` | `rush-01.jpg` | Morning Rush | Student Lounge | 2026-09-24 09:55 — students settling into the student lounge |
+| `2.jpg` | `rush-02.jpg` | Afternoon Rush | Outdoor | No readable EXIF — shaded campus walkway |
+| `3.JPG` | `rush-03.jpg` | Peak Rush | Mini Mart | 2026-09-23 15:45 — crowd outside Mini Mart |
 | `4.HEIC` | `rush-04.jpg` | Peak Rush | Corridors | 2026-09-24 13:06 — crowd at a corridor junction |
 | `5.HEIC` | `rush-05.jpg` | Peak Rush | Corridors | 2026-09-24 13:07 — busy clinic corridor |
 | `6.jpg` | `rush-06.jpg` | Morning Rush | Outdoor | 2026-09-24 09:42 — campus roundabout |
@@ -25,7 +25,7 @@ both a rush-phase monitor and its location drawer.
 | `8.HEIC` | `rush-08.jpg` | Afternoon Rush | Sports Complex | 2026-09-24 13:08 — table tennis activity |
 | `9.JPG` | `rush-09.jpg` | Morning Rush | Corridors | 2026-09-24 10:16 — students moving through corridor |
 | `10.JPG` | `rush-10.jpg` | Afternoon Rush | Sports Complex | 2026-09-24 12:59 — spectators and players |
-| `11.jpg` | `rush-11.jpg` | Afternoon Rush | Student Lounge | 2026-09-23 13:48 — occupied MTH Mall lounge |
+| `11.jpg` | `rush-11.jpg` | Afternoon Rush | Student Lounge | 2026-09-23 13:48 — occupied student lounge |
 | `12.jpg` | `rush-12.jpg` | Afternoon Rush | Student Lounge | 2026-09-23 13:48 — foot traffic through lounge |
 | `13.jpg` | `rush-13.jpg` | Peak Rush | Corridors | 2026-09-23 13:49 — stairwell queue |
 | `14.jpg` | `rush-14.jpg` | Peak Rush | Outdoor | 2026-09-23 13:51 — queue at outdoor stall |
@@ -38,10 +38,10 @@ both a rush-phase monitor and its location drawer.
 | `21.jpg` | `rush-21.jpg` | Afternoon Rush | Canteen | 2026-09-24 13:19 — students dining |
 | `22.jpg` | `rush-22.jpg` | Afternoon Rush | Outdoor | 2026-09-24 12:59 — students on the move |
 | `23.jpg` | `rush-23.jpg` | Peak Rush | Canteen | 2026-09-24 13:29 — food-counter queue |
-| `24.jpg` | `rush-24.jpg` | Afternoon Rush | Student Lounge | 2026-09-24 13:39 — groups in MTH Mall |
+| `24.jpg` | `rush-24.jpg` | Afternoon Rush | Student Lounge | 2026-09-24 13:39 — groups in the student lounge |
 | `25.jpg` | `rush-25.jpg` | Afternoon Rush | Student Lounge | 2026-09-24 13:39 — lounge seating |
 | `26.jpg` | `rush-26.jpg` | Afternoon Rush | Student Lounge | 2026-09-24 14:02 — students passing through |
-| `27.jpg` | `rush-27.jpg` | Peak Rush | MTH Mall | No readable EXIF — MTH Mall crowd |
+| `27.jpg` | `rush-27.jpg` | Peak Rush | Mini Mart | No readable EXIF — Mini Mart crowd |
 | `28.jpg` | `rush-28.jpg` | Peak Rush | Sports Complex | No readable EXIF — sports festival crowd |
 | `29.jpg` | `rush-29.jpg` | Peak Rush | Outdoor | No readable EXIF — outdoor foot traffic |
 | `30.HEIC` | `rush-30.jpg` | Afternoon Rush | Outdoor | 2026-09-24 12:59 — campus walkway |
