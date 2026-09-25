@@ -135,7 +135,7 @@ DESKTOPS (rush-hour phases, one photo set each):
 FILE CABINETS (location-based, drawer -> file -> photos):
 - 2 cabinets, 4 drawers each. 6 drawers used for categories, 2 bottom
   drawers (one per cabinet) left empty.
-- Drawer labels: Canteen, Outdoor, Library, Classrooms, Corridors,
+- Drawer labels: Canteen, Outdoor, MTH Mall, Student Lounge, Corridors,
   Sports Complex.
 - Click a cabinet -> camera/view zooms toward it.
 - Click a drawer -> drawer slides open (CSS transform/transition),

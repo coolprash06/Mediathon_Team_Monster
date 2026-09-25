@@ -279,8 +279,8 @@
   /* ---------------------------------------------------------- file cabinets */
 
   var CABINETS = [
-    { x: 505, drawers: ['Canteen', 'Outdoor', 'Library', ''] },
-    { x: 735, drawers: ['Classrooms', 'Corridors', 'Sports Complex', ''] }
+    { x: 505, drawers: ['Canteen', 'Outdoor', 'MTH Mall', ''] },
+    { x: 735, drawers: ['Student Lounge', 'Corridors', 'Sports Complex', ''] }
   ];
 
   function buildCabinet(room, spec, ci) {
