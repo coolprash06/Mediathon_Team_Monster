@@ -4,6 +4,8 @@ Mediathon 3.0 portfolio website for BPDC on the theme **Rush Hour**.
 
 **Live site:** [SiteUrl](https://coolprash06.github.io/Mediathon_Team_Monster/)
 
+**Youtube Video Demo (In Case there are glitches in your PC):** https://youtu.be/ur4rpfRrtGA
+
 ## The site
 
 You enter a dark, retro security room. Pull the chain on the desk lamp to turn the lights on. Then explore:
