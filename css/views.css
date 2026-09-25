@@ -456,7 +456,7 @@
   transform: translateZ(190px) translate(var(--open-dx, 0px), var(--open-dy, 0px));
 }
 
-.cd--file:not(.is-open):hover {
+.cd--file:not(.is-open):not(.is-lifting):hover {
   transform: translateZ(10px);
 }
 
@@ -641,10 +641,25 @@
   transition-delay: 0s;
 }
 
-/* ...and is lifted clear when taken. */
+/* ...and is lifted clear when taken (CD_LIFT in js/explore.js)... */
 .cd.is-open.is-lifting .cd-folder:not(.cd-folder--spare) {
   transform: translateZ(-40px) translateY(-280px);
   transition: transform 0.55s cubic-bezier(0.5, 0, 0.3, 1);
+}
+
+/* ...where it hangs still while the drawer shuts under it: it takes on the
+   drawer's pull (.cd.is-open) as the drawer gives it up, on the drawer's own
+   timing, so the two cancel out. */
+.cd.is-lifting:not(.is-open) .cd-folder:not(.cd-folder--spare) {
+  visibility: visible;
+  transform: translate(var(--open-dx, 0px), var(--open-dy, 0px)) translateZ(150px) translateY(-280px);
+  transition: transform 0.75s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+/* The travelling file in the room takes over from the close-up with a cut
+   (js/explore.js): the close-up cabinet goes at once, the rest fades. */
+.view--cabinet.is-handed-off .ccab-wrap {
+  opacity: 0;
 }
 
 /* ========================================================= desk + folder */

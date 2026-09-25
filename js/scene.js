@@ -405,15 +405,16 @@
    * upright (facing the camera) in a drawer and rotateX(90) lying on the desk.
    */
   function buildTravelFile(room) {
+    // Same size as the close-up's hanging file (.cd-folder in views.css), which it takes over from
     var g = el('div', 'obj travel-file', room);
     g.id = 'travel-file';
     var front = el('div', 'f f--front tf-face', g);
-    size(front, 150, 112);
+    size(front, 189, 108);
     var tab = el('span', 'tf-tab', front);
     el('span', 'tf-label', tab);
     el('span', 'tf-stamp', front, 'RUSH HOUR');
     var back = el('div', 'f f--front tf-face tf-face--back', g);
-    size(back, 150, 112);
+    size(back, 189, 108);
     back.style.transform = 'rotateY(180deg)';
     return g;
   }

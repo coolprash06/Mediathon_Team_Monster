@@ -44,6 +44,9 @@
    *  (see setEye). */
   var CCAB_PERSPECTIVE = 1100;
   var CD_OPEN_Z = 190;
+  /** Matches .cd.is-open.is-lifting .cd-folder in views.css: how far a taken
+   *  file rises, and how far it sits behind the drawer front. */
+  var CD_LIFT = { y: -280, z: -40 };
   /** Headroom above the cabinet, in close-up px, for the file an open drawer
    *  lifts clear of its footprint (see --head in views.css). */
   var CCAB_HEAD = 112;
@@ -51,7 +54,8 @@
   /** Close-up px per room px at the cabinets' distance: the room's 1200px
    *  perspective seen from the cabinet fronts, expressed in the close-up's
    *  1100px one. Turns a room eye position into a close-up eye position. */
-  var CCAB_EYE_R = CCAB_PERSPECTIVE / (1200 - (geo.drawerZ + geo.drawerDepth / 2));
+  var FRONT_D = 1200 - (geo.drawerZ + geo.drawerDepth / 2);
+  var CCAB_EYE_R = CCAB_PERSPECTIVE / FRONT_D;
   /** The cabinets' top edge in room px (the room's eye sits at y 0). */
   var CABINET_TOP_Y = RH.world.FLOOR - 532;
   /** The room's resting perspective-origin (EYE_X / EYE_Y in main.js). */
@@ -327,8 +331,26 @@
     return slug;
   }
 
+  /** Pulling a room drawer toward the eye also drags it toward the eye's
+   *  vanishing point - down over the drawer below, and sideways. Offset it so
+   *  it grows in place about its front, as the close-up's drawers do (setEye);
+   *  the file it holds moves with it (fileAt). */
+  function pullOffset(ci, k) {
+    var e = roomEyeWorld();
+    return {
+      x: (e.x - geo.cabinetX[ci]) * ROOM_PULL / FRONT_D,
+      y: (e.y - (geo.drawerTop(k) + 62)) * ROOM_PULL / FRONT_D
+    };
+  }
+
   function pullRoomDrawer(ci, k, out) {
-    roomDrawers[ci][k].classList.toggle('is-pulled', out);
+    var node = roomDrawers[ci][k];
+    if (out) {
+      var o = pullOffset(ci, k);
+      node.style.setProperty('--pull-dx', o.x.toFixed(1) + 'px');
+      node.style.setProperty('--pull-dy', o.y.toFixed(1) + 'px');
+    }
+    node.classList.toggle('is-pulled', out);
   }
 
   function closeRoomDrawers() {
@@ -360,13 +382,38 @@
     var top = geo.drawerTop(k);
     var z = geo.drawerZ + ROOM_PULL;
     var d = geo.drop;
+    var o = pullOffset(ci, k); // riding in the pulled drawer
     switch (where) {
-      case 'inside': return { x: x, y: top + 62, z: z, ry: 0, rx: 0, rz: 0 };
-      case 'above': return { x: x, y: top - 70, z: z, ry: 0, rx: 0, rz: 0 };
-      case 'arc': return { x: (x + d.x + 75) / 2, y: Math.min(top - 70, d.y - 100) - 40, z: (z + d.z) / 2 + 60, ry: -24, rx: 42, rz: -4 };
+      case 'lifted': return liftedAt(ci, k);
+      // Hanging in the drawer, its tab just below the rim
+      case 'inside': return { x: x + o.x, y: top + 66 + o.y, z: z, ry: 0, rx: 0, rz: 0 };
+      case 'above': return { x: x + o.x, y: top - 70 + o.y, z: z, ry: 0, rx: 0, rz: 0 };
+      case 'arc': return { x: (x + d.x + 95) / 2, y: Math.min(top - 70, d.y - 100) - 40, z: (z + d.z) / 2 + 60, ry: -24, rx: 42, rz: -4 };
       // #file-drop marks the folder's back-left corner on the desk
-      default: return { x: d.x + 75, y: d.y, z: d.z + 56, ry: 0, rx: 90, rz: -8 };
+      default: return { x: d.x + 94.5, y: d.y, z: d.z + 54, ry: 0, rx: 90, rz: -8 };
     }
+  }
+
+  /** The room pose that looks just like the close-up's lifted file (they are
+   *  the same size: see buildTravelFile), so the cut between them doesn't
+   *  jump. The close-up is the room seen at CCAB_EYE_R depth, 1:1 across the
+   *  cabinet front: project the lifted file onto that front, then find the
+   *  room point that projects to the same place at the same scale. */
+  function liftedAt(ci, k) {
+    var p = roomEye(ci);
+    var od = openDrift(p, k);
+    var s = CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - (CD_OPEN_Z + CD_LIFT.z));
+    var cx = 107.5 + od.x; // the folder's centre, close-up px
+    var cy = 8 + 128 * k + 4 + 54 + CD_LIFT.y + od.y;
+    var fx = geo.cabinetX[ci] - 107.5 + p.x + (cx - p.x) * s; // where it shows, on the front
+    var fy = CABINET_TOP_Y + p.y + (cy - p.y) * s;
+    var e = roomEyeWorld();
+    return {
+      x: e.x + (fx - e.x) / s,
+      y: e.y + (fy - e.y) / s,
+      z: 1200 - FRONT_D / s,
+      ry: 0, rx: 0, rz: 0
+    };
   }
 
   function pose(p) {
@@ -566,13 +613,26 @@
    *  room's own eye, the close-up and everything the room draws around it stay
    *  one picture. */
   function roomEye(ci) {
-    var o = (camera.style.perspectiveOrigin || '').match(/-?[\d.]+/g);
-    var ex = o ? parseFloat(o[0]) - ROOM_EYE.x : 0;
-    var ey = o ? parseFloat(o[1]) - ROOM_EYE.y : 0;
+    var e = roomEyeWorld();
     return {
-      x: 107.5 + (ex - geo.cabinetX[ci]) * CCAB_EYE_R,
-      y: (ey - CABINET_TOP_Y) * CCAB_EYE_R
+      x: 107.5 + (e.x - geo.cabinetX[ci]) * CCAB_EYE_R,
+      y: (e.y - CABINET_TOP_Y) * CCAB_EYE_R
     };
+  }
+
+  /** The room's eye in room px (it rests at 0, 0; main.js adds parallax). */
+  function roomEyeWorld() {
+    var o = (camera.style.perspectiveOrigin || '').match(/-?[\d.]+/g);
+    return {
+      x: o ? parseFloat(o[0]) - ROOM_EYE.x : 0,
+      y: o ? parseFloat(o[1]) - ROOM_EYE.y : 0
+    };
+  }
+
+  /** --open-dx / --open-dy for close-up drawer k seen from eye p (see setEye). */
+  function openDrift(p, k) {
+    var shrink = -CD_OPEN_Z / CCAB_PERSPECTIVE;
+    return { x: (107.5 - p.x) * shrink, y: (8 + 128 * k + 62 - p.y) * shrink };
   }
 
   function setEye(p) {
@@ -583,11 +643,10 @@
     // the labelled drawer below it, and sideways since the eye is off to the
     // cabinet's left. Counter that drift so opening a drawer only grows it in
     // place, whatever row it's in.
-    var shrink = (1 - CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - CD_OPEN_Z)) /
-      (CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - CD_OPEN_Z));
     cab.drawers.forEach(function (d, k) {
-      d.el.style.setProperty('--open-dx', ((107.5 - p.x) * shrink).toFixed(1) + 'px');
-      d.el.style.setProperty('--open-dy', ((8 + 128 * k + 62 - p.y) * shrink).toFixed(1) + 'px');
+      var od = openDrift(p, k);
+      d.el.style.setProperty('--open-dx', od.x.toFixed(1) + 'px');
+      d.el.style.setProperty('--open-dy', od.y.toFixed(1) + 'px');
     });
   }
 
@@ -595,6 +654,7 @@
     state.cabinet = ci;
     state.drawer = -1;
     cab.title.textContent = 'Filing cabinet ' + (ci + 1);
+    cab.view.classList.remove('is-handed-off');
     instantly(cab.box, function () {
       cab.drawers.forEach(function (d, k) {
         var src = roomDrawers[ci][k];
@@ -725,26 +785,39 @@
     };
     dressFolder();
 
-    // 1. Lift it clear of the drawer in the close-up
+    // 1. Lift it clear of the drawer in the close-up...
     d.el.classList.add('is-lifting');
     await wait(560);
     if (id !== flow) return;
 
-    // 2. Cut back to the room: the real drawer is out, the folder above it
-    travelLabel.textContent = d.label;
-    travel.style.transform = pose(fileAt('above', ci, k));
-    travel.classList.add('is-visible');
+    // 2. ...and shut the drawer under it (the room's own drawer, hidden
+    // behind the close-up, shuts with it)
+    d.el.classList.remove('is-open');
+    d.folder.tabIndex = -1;
+    pullRoomDrawer(ci, k, false);
+    await wait(760);
+    if (id !== flow) return;
+
+    // 3. Cut back to the room. Both cabinets are shut, so they match, and the
+    // room's file appears where the close-up's was hanging. A cut, not a
+    // crossfade: the two 3D renders are never on screen together.
+    instantly(travel, function () {
+      travelLabel.textContent = d.label;
+      travel.style.transform = pose(fileAt('lifted', ci, k));
+      travel.classList.add('is-visible');
+    });
+    cab.view.classList.add('is-handed-off');
     showRoomCabinet(ci);
-    hideView(cab.view);
+    hideView(cab.view); // the dimming and the buttons still fade
     await wait(220);
     if (id !== flow) return;
 
-    // 3. Pull back to hold cabinet and desk in frame while it flies over
+    // 4. Pull back to hold cabinet and desk in frame while it flies over
     aimWide(flightBox(ci), 0.86, ms(1400));
-    await flyFile(['above', 'arc', 'desk'], ms(1500));
+    await flyFile(['lifted', 'arc', 'desk'], ms(1500));
     if (id !== flow) return;
 
-    // 4. Push in on the desk, then cut to the close-up of the folder
+    // 5. Push in on the desk, then cut to the close-up of the folder
     aimWide(roomBox(deskTop), 0.96, ms(900));
     await wait(650);
     if (id !== flow) return;
@@ -976,7 +1049,9 @@
     desk.open.focus({ preventScroll: true });
   }
 
-  /** Desk -> the file flies home -> cabinet close-up, where it drops back in. */
+  /** Desk -> the file flies home and drops into its drawer, which rolls shut
+   *  -> cabinet close-up. All of it plays out in the room: the close-up only
+   *  comes back once the cabinet is shut and the two match exactly. */
   async function returnFile() {
     if (state.busy || state.view !== 'desk') return;
     var id = ++flow;
@@ -988,32 +1063,35 @@
     await wait(250);
     if (id !== flow) return;
     aimWide(flightBox(f.cabinet), 0.86, ms(1300));
+    pullRoomDrawer(f.cabinet, f.drawer, true); // out to take it back
     await flyFile(['desk', 'arc', 'above'], ms(1400));
     if (id !== flow) return;
+    await flyFile(['above', 'inside'], ms(380), 'cubic-bezier(0.5, 0, 0.75, 0.4)');
+    if (id !== flow) return;
 
-    // Back to the cabinet close-up with the drawer still out
+    // Down inside the drawer and out of sight: the drawer rolls shut as the
+    // camera closes in on the cabinet
+    instantly(travel, hideTravelFile);
+    pullRoomDrawer(f.cabinet, f.drawer, false);
     instantly(cab.box, function () {
-      d.el.classList.add('is-open', 'is-lifting');
+      d.el.classList.remove('is-open', 'is-lifting');
       setEye(roomEye(f.cabinet));
     });
-    state.drawer = f.drawer;
+    cab.view.classList.remove('is-handed-off');
+    state.drawer = -1;
     updateCabinetActions();
     fitCabinet();
     aim(roomBox(cavityOf(f.cabinet)), screenBox(cab.wrap.getBoundingClientRect()), ms(900));
-    await wait(650);
+    await wait(850);
     if (id !== flow) return;
-    showView(cab.view);
+    showView(cab.view); // shut, the close-up matches the room's cabinet
     hideRoomCabinet(f.cabinet);
     state.view = 'cabinet';
-    await wait(300);
-    if (id !== flow) return;
-    hideTravelFile();
-    d.el.classList.remove('is-lifting'); // drops back into the drawer
-    await wait(650);
+    await wait(450);
     if (id !== flow) return;
     state.file = null;
     state.busy = false;
-    closeDrawer(); // and the drawer rolls shut
+    d.front.focus({ preventScroll: true });
   }
 
   desk.open.addEventListener('click', openFile);
@@ -1072,6 +1150,9 @@
     var id = ++flow;
     var origin = state.origin;
     state.busy = true;
+    // Cut, don't crossfade, from the cabinet close-up to the room's cabinet:
+    // with a drawer out, the two renders never quite line up.
+    cab.view.classList.add('is-handed-off');
     allViews.forEach(hideView);
     setCamera(1, 0, 0, ms(1000));
     closeRoomDrawers();
@@ -1087,6 +1168,7 @@
     instantly(cab.box, function () {
       cab.drawers.forEach(function (d) { d.el.classList.remove('is-open', 'is-lifting'); });
     });
+    cab.view.classList.remove('is-handed-off');
     instantly(desk.view, function () {
       desk.view.classList.remove('is-spread');
       desk.folder.classList.remove('is-open', 'is-spread');
