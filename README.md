@@ -2,7 +2,7 @@
 
 Mediathon 3.0 portfolio website for BPDC on the theme **Rush Hour**.
 
-**Live site:** [SiteUrl](https://coolprash06.github.io/Mediathon_Team_Monster/))
+**Live site:** [SiteUrl](https://coolprash06.github.io/Mediathon_Team_Monster/)
 
 ## The site
 
