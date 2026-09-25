@@ -450,10 +450,10 @@
 }
 
 .cd.is-open {
-  /* --open-dy (js/explore.js) counters the perspective drift this pull would
+  /* --open-dx/--open-dy (js/explore.js setEye) counter the perspective drift this pull would
      otherwise add, so the drawer grows toward the camera in place instead of
      sliding down over the drawer below it. */
-  transform: translateZ(190px) translateY(var(--open-dy, 0px));
+  transform: translateZ(190px) translate(var(--open-dx, 0px), var(--open-dy, 0px));
 }
 
 .cd--file:not(.is-open):hover {

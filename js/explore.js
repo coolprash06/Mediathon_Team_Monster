@@ -35,9 +35,9 @@
   var ROOM_PULL = 170;
   var ZOOM_MS = 1100;
 
-  /** Matches .ccab's perspective and .cd.is-open's translateZ in views.css,
-   *  and the leaned-in eye (LEAN_IN) below - used to counter the vertical
-   *  parallax an opened drawer would otherwise pick up (see buildCloseCabinet). */
+  /** Matches .ccab's perspective and .cd.is-open's translateZ in views.css -
+   *  used to counter the parallax an opened drawer would otherwise pick up
+   *  (see setEye). */
   var CCAB_PERSPECTIVE = 1100;
   var CD_OPEN_Z = 190;
   /** Headroom above the cabinet, in close-up px, for the file an open drawer
@@ -48,10 +48,10 @@
    *  perspective seen from the cabinet fronts, expressed in the close-up's
    *  1100px one. Turns a room eye position into a close-up eye position. */
   var CCAB_EYE_R = CCAB_PERSPECTIVE / (1200 - (geo.drawerZ + geo.drawerDepth / 2));
-  /** How far the room's eye sits above a cabinet's top edge, in close-up px.
-   *  The close-up holds this height so the cabinet keeps the exact angle it
-   *  had in the room; only the sideways offset is levelled out (LEAN_IN). */
-  var CABINET_EYE_Y = -(RH.world.FLOOR - 532) * CCAB_EYE_R;
+  /** The cabinets' top edge in room px (the room's eye sits at y 0). */
+  var CABINET_TOP_Y = RH.world.FLOOR - 532;
+  /** The room's resting perspective-origin (EYE_X / EYE_Y in main.js). */
+  var ROOM_EYE = { x: 800, y: 360 };
 
   var reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   function motionOn() { return !reduceQuery.matches; }
@@ -520,16 +520,7 @@
 
     for (var k = 0; k < 4; k++) {
       var d = el('div', 'cd', body);
-      var top = 8 + 128 * k;
-      d.style.top = top + 'px';
-      // Under the leaned-in perspective-origin, pulling a drawer toward the
-      // camera (translateZ) also drags it visually down/up toward the eye's
-      // own vanishing point - enough for a middle drawer to slide over the
-      // labelled drawer below it. Counter that drift so opening a drawer
-      // only grows it in place, whatever row it's in.
-      var growth = CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - CD_OPEN_Z);
-      var driftFix = (top + 62 - CABINET_EYE_Y) * (1 - growth) / growth;
-      d.style.setProperty('--open-dy', driftFix.toFixed(1) + 'px');
+      d.style.top = 8 + 128 * k + 'px';
       el('div', 'cd-floor', d);
       el('div', 'cd-back', d);
       el('div', 'cd-wall cd-wall--l m-olive', d);
@@ -560,23 +551,41 @@
       Math.max(0.3, Math.min(r.width / 215, r.height / (532 + CCAB_HEAD))).toFixed(4));
   }
 
-  /** Where the room's eye sits relative to cabinet ci, in close-up units,
-   *  so the first frame of the close-up sees it from the same angle. */
+  /** Where the room's eye sits relative to cabinet ci, in close-up units -
+   *  including any mouse parallax main.js has on the room right now (it holds
+   *  the eye still for as long as the zoom lasts).
+   *
+   *  The close-up keeps this eye for its whole life. It used to slide round to
+   *  dead centre once the zoom landed, turning the cabinet front-on - but the
+   *  binders and archive box on top are the room's, still seen from the room's
+   *  angle, and they came away from the cabinet they stand on. Seen from the
+   *  room's own eye, the close-up and everything the room draws around it stay
+   *  one picture. */
   function roomEye(ci) {
-    return { x: 107.5 - geo.cabinetX[ci] * CCAB_EYE_R, y: CABINET_EYE_Y };
+    var o = (camera.style.perspectiveOrigin || '').match(/-?[\d.]+/g);
+    var ex = o ? parseFloat(o[0]) - ROOM_EYE.x : 0;
+    var ey = o ? parseFloat(o[1]) - ROOM_EYE.y : 0;
+    return {
+      x: 107.5 + (ex - geo.cabinetX[ci]) * CCAB_EYE_R,
+      y: (ey - CABINET_TOP_Y) * CCAB_EYE_R
+    };
   }
 
   function setEye(p) {
     cab.box.style.setProperty('--eye-x', p.x.toFixed(1) + 'px');
     cab.box.style.setProperty('--eye-y', p.y.toFixed(1) + 'px');
+    // Pulling a drawer toward the camera (translateZ) also drags it toward the
+    // eye's vanishing point - down/up enough for a middle drawer to slide over
+    // the labelled drawer below it, and sideways since the eye is off to the
+    // cabinet's left. Counter that drift so opening a drawer only grows it in
+    // place, whatever row it's in.
+    var shrink = (1 - CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - CD_OPEN_Z)) /
+      (CCAB_PERSPECTIVE / (CCAB_PERSPECTIVE - CD_OPEN_Z));
+    cab.drawers.forEach(function (d, k) {
+      d.el.style.setProperty('--open-dx', ((107.5 - p.x) * shrink).toFixed(1) + 'px');
+      d.el.style.setProperty('--open-dy', ((8 + 128 * k + 62 - p.y) * shrink).toFixed(1) + 'px');
+    });
   }
-
-  /** The cabinets stand off to the right of the room, so the room sees them
-   *  from their left. The close-up slides the eye round to dead centre, which
-   *  is what "look closer" means here - and keeps the room's own height, so
-   *  the cabinet settles front-on at the angle it already had rather than
-   *  tipping into a plan view the visitor never asked for. */
-  var LEAN_IN = { x: 107.5, y: CABINET_EYE_Y };
 
   function dressCabinet(ci) {
     state.cabinet = ci;
@@ -624,9 +633,7 @@
     if (id !== flow) return;
     showView(cab.view);
     hideRoomCabinet(ci); // the close-up now covers it exactly; stop trusting alignment
-    await wait(120);
-    setEye(LEAN_IN); // the camera leans in over the cabinet
-    await wait(330);
+    await wait(450);
     if (id !== flow) return;
     state.busy = false;
     var first = cab.drawers.filter(function (d) { return d.label; })[0];
@@ -927,7 +934,7 @@
     // Back to the cabinet close-up with the drawer still out
     instantly(cab.box, function () {
       d.el.classList.add('is-open', 'is-lifting');
-      setEye(LEAN_IN);
+      setEye(roomEye(f.cabinet));
     });
     state.drawer = f.drawer;
     updateCabinetActions();
